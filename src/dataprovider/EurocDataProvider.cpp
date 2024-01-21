@@ -106,13 +106,14 @@ EurocDataProvider::~EurocDataProvider() {
 }
 
 /* -------------------------------------------------------------------------- */
+//会对imu和两个相机的数据进行分发
 bool EurocDataProvider::spin() {
   if (dataset_parsed_) {
     if (!is_imu_data_sent_) {
       // First, send all the IMU data. The flag is to avoid sending it several
       // times if we are running in sequential mode.
       if (imu_single_callback_) {
-        sendImuData();
+        sendImuData();//在这里进行imu数据的分发！！！！
       } else {
         LOG(ERROR) << "Imu callback not registered! Not sending IMU data.";
       }
@@ -125,6 +126,7 @@ bool EurocDataProvider::spin() {
     // We log only the first one, because we may be running in sequential mode.
     LOG_FIRST_N(INFO, 1) << "Running dataset between frame " << initial_k_
                          << " and frame " << final_k_;
+    //非常重要的函数！！！实现了图像数据的数据分发！！！！               
     while (!shutdown_ && spinOnce()) {
       if (!vio_params_.parallel_run_) {
         // Return, instead of blocking, when running in sequential mode.

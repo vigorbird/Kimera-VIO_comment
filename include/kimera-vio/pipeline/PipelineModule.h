@@ -308,6 +308,7 @@ class MIMOPipelineModule : public PipelineModule<Input, Output> {
    * this module.
    * @param output_callback actual callback to register.
    */
+  //
   virtual void registerOutputCallback(const OutputCallback& output_callback) {
     CHECK(output_callback);
     output_callbacks_.push_back(output_callback);

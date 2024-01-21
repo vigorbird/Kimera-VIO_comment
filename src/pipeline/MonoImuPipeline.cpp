@@ -251,7 +251,7 @@ MonoImuPipeline::MonoImuPipeline(const VioParams& params,
                         std::bind(&MonoImuPipeline::shutdown, this)));
   }
 
-  launchThreads();
+  launchThreads();//非常重要的函数！！！！！构造线程！！！！！！！！！！！！！！
 }
 
 }  // namespace VIO

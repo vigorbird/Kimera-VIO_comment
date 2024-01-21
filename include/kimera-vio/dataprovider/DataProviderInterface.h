@@ -73,6 +73,7 @@ class DataProviderInterface {
       const ImuSingleInputCallback& callback) {
     imu_single_callback_ = callback;
   }
+
   inline void registerImuMultiCallback(const ImuMultiInputCallback& callback) {
     imu_multi_callback_ = callback;
   }
@@ -94,10 +95,10 @@ class DataProviderInterface {
  protected:
   // Vio callbacks. These functions should be called once data is available for
   // processing.
-  ImuSingleInputCallback imu_single_callback_;
+  ImuSingleInputCallback imu_single_callback_;//外部传入的函数
   ImuMultiInputCallback imu_multi_callback_;
-  FrameInputCallback left_frame_callback_;
-  FrameInputCallback right_frame_callback_;
+  FrameInputCallback left_frame_callback_;//外部传入的函数
+  FrameInputCallback right_frame_callback_;//外部传入的函数
   DepthFrameInputCallback depth_frame_callback_;
   ExternalOdomInputCallback external_odom_callback_;
 

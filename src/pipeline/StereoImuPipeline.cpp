@@ -36,6 +36,7 @@ DECLARE_bool(do_fine_imu_camera_temporal_sync);
 
 namespace VIO {
 
+//超长的构造函数！！！奶奶个腿的！！！
 StereoImuPipeline::StereoImuPipeline(const VioParams& params,
                                      Visualizer3D::UniquePtr&& visualizer,
                                      DisplayBase::UniquePtr&& displayer,
@@ -54,6 +55,7 @@ StereoImuPipeline::StereoImuPipeline(const VioParams& params,
       parallel_run_,
       // TODO(Toni): these params should not be sent...
       params.frontend_params_.stereo_matching_params_);
+
   if (FLAGS_do_coarse_imu_camera_temporal_sync) {
     data_provider_module_->doCoarseImuCameraTemporalSync();
   }
@@ -71,6 +73,7 @@ StereoImuPipeline::StereoImuPipeline(const VioParams& params,
         params.odom_params_.value().time_shift_s_);
   }
 
+  //1.非常重要的注册回调函数！！！！！！！！！！！！！！！！！！！！！！！！！！！
   data_provider_module_->registerVioPipelineCallback(
       std::bind(&StereoImuPipeline::spinOnce, this, std::placeholders::_1));
 
@@ -87,11 +90,14 @@ StereoImuPipeline::StereoImuPipeline(const VioParams& params,
           FLAGS_visualize ? &display_input_queue_ : nullptr,
           FLAGS_log_output,
           params.odom_params_));
+
   auto& backend_input_queue = backend_input_queue_;  //! for the lambda below
   vio_frontend_module_->registerImuTimeShiftUpdateCallback(
       [&](double imu_time_shift_s) {
         data_provider_module_->setImuTimeShift(imu_time_shift_s);
       });
+
+
   vio_frontend_module_->registerOutputCallback(
       [&backend_input_queue](const FrontendOutputPacketBase::Ptr& output) {
         auto converted_output =

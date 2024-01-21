@@ -50,6 +50,8 @@ int main(int argc, char* argv[]) {
   VIO::VioParams vio_params(FLAGS_params_folder_path);
 
   // Build dataset parser.
+  //作者这里提供了两种数据集的加载：euroc和kitti数据集，
+  //其中euroc数据集可以选择使用单目imu还是双目imu
   VIO::DataProviderInterface::Ptr dataset_parser = nullptr;
   switch (FLAGS_dataset_type) {
     case 0: {
@@ -78,14 +80,15 @@ int main(int argc, char* argv[]) {
   }
   CHECK(dataset_parser);
 
+  //可以选择单目imu算法 还是 双目imu算法
   VIO::Pipeline::Ptr vio_pipeline;
-
   switch (vio_params.frontend_type_) {
     case VIO::FrontendType::kMonoImu: {
-      vio_pipeline = std::make_unique<VIO::MonoImuPipeline>(vio_params);
+      //子类指针赋值给父类指针！！！！！
+      vio_pipeline = std::make_unique<VIO::MonoImuPipeline>(vio_params);//构造函数非常重要！！！！！
     } break;
     case VIO::FrontendType::kStereoImu: {
-      vio_pipeline = std::make_unique<VIO::StereoImuPipeline>(vio_params);
+      vio_pipeline = std::make_unique<VIO::StereoImuPipeline>(vio_params);//构造函数非常重要！！！！！
     } break;
     default: {
       LOG(FATAL) << "Unrecognized Frontend type: "
@@ -100,10 +103,13 @@ int main(int argc, char* argv[]) {
       std::bind(&VIO::DataProviderInterface::shutdown, dataset_parser));
 
   // Register callback to vio pipeline.
+  //将pipeline的函数送给数据集的类，当数据类分发数据时会调用这个函数
+  //最终会更新
   dataset_parser->registerImuSingleCallback(std::bind(
       &VIO::Pipeline::fillSingleImuQueue, vio_pipeline, std::placeholders::_1));
   // We use blocking variants to avoid overgrowing the input queues (use
   // the non-blocking versions with real sensor streams)
+  //
   dataset_parser->registerLeftFrameCallback(std::bind(
       &VIO::Pipeline::fillLeftFrameQueue, vio_pipeline, std::placeholders::_1));
 
@@ -138,6 +144,7 @@ int main(int argc, char* argv[]) {
     handle_shutdown.get();
     handle_pipeline.get();
   } else {
+    // 非常重要的函数！！！！在这里面进行的数据分发！！！！！！！！！
     while (dataset_parser->spin() && vio_pipeline->spin()) {
       continue;
     };

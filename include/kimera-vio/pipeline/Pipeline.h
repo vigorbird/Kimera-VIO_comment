@@ -74,6 +74,7 @@ class Pipeline {
         std::move(left_frame));
   }
 
+  //注意这两个函数输入参数的参数不同，一个是多个观测一个是单个观测
   inline void fillSingleImuQueue(const ImuMeasurement& imu_measurement) {
     CHECK(data_provider_module_);
     data_provider_module_->fillImuQueue(imu_measurement);
