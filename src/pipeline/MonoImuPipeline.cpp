@@ -46,6 +46,7 @@ MonoImuPipeline::MonoImuPipeline(const VioParams& params,
 
   data_provider_module_ = std::make_unique<MonoDataProviderModule>(
       &frontend_input_queue_, "Mono Data Provider", parallel_run_);
+      
   if (FLAGS_do_coarse_imu_camera_temporal_sync) {
     data_provider_module_->doCoarseImuCameraTemporalSync();
   }

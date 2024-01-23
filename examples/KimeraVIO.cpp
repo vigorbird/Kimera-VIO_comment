@@ -80,6 +80,7 @@ int main(int argc, char* argv[]) {
 
   VIO::Pipeline::Ptr vio_pipeline;
 
+  //Kimera有多种运行模式：单目+imu 和双目+imu
   switch (vio_params.frontend_type_) {
     case VIO::FrontendType::kMonoImu: {
       vio_pipeline = std::make_unique<VIO::MonoImuPipeline>(vio_params);
@@ -100,6 +101,8 @@ int main(int argc, char* argv[]) {
       std::bind(&VIO::DataProviderInterface::shutdown, dataset_parser));
 
   // Register callback to vio pipeline.
+  //非常重要的函数！！！
+  //IMU的回调和左目相机的回调
   dataset_parser->registerImuSingleCallback(std::bind(
       &VIO::Pipeline::fillSingleImuQueue, vio_pipeline, std::placeholders::_1));
   // We use blocking variants to avoid overgrowing the input queues (use
@@ -107,11 +110,12 @@ int main(int argc, char* argv[]) {
   dataset_parser->registerLeftFrameCallback(std::bind(
       &VIO::Pipeline::fillLeftFrameQueue, vio_pipeline, std::placeholders::_1));
 
+  
   if (vio_params.frontend_type_ == VIO::FrontendType::kStereoImu) {
     auto stereo_pipeline =
         std::dynamic_pointer_cast<VIO::StereoImuPipeline>(vio_pipeline);
     CHECK(stereo_pipeline);
-
+    //右目相机的回调！！！
     dataset_parser->registerRightFrameCallback(
         std::bind(&VIO::StereoImuPipeline::fillRightFrameQueue,
                   stereo_pipeline,
