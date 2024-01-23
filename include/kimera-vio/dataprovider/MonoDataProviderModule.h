@@ -104,7 +104,7 @@ class MonoDataProviderModule : public DataProviderModule {
 
  protected:
   //! Input data
-  ThreadsafeQueue<Frame::UniquePtr> left_frame_queue_;
+  ThreadsafeQueue<Frame::UniquePtr> left_frame_queue_;//从数据集获取的左相机队列
 
   //! Used to handle when we're waiting for IMU data in sequential mode
   Frame::UniquePtr cached_left_frame_;

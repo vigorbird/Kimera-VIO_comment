@@ -77,7 +77,7 @@ class StereoDataProviderModule : public MonoDataProviderModule {
 
  private:
   //! Input data
-  ThreadsafeQueue<Frame::UniquePtr> right_frame_queue_;
+  ThreadsafeQueue<Frame::UniquePtr> right_frame_queue_;//从数据集取出来的数据放到这个队列中
   // TODO(Toni): remove these below
   StereoMatchingParams stereo_matching_params_;
 };

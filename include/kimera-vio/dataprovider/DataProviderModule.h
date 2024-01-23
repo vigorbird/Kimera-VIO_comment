@@ -171,7 +171,7 @@ class DataProviderModule : public MISOPipelineModule<FrontendInputPacketBase,
  protected:
   static const Timestamp InvalidTimestamp = 0;
   //! Input data
-  ImuData imu_data_;
+  ImuData imu_data_;//从数据集中得到的数据队列！！！
   bool repeated_frame_;
   Timestamp timestamp_last_frame_;
   bool do_coarse_imu_camera_temporal_sync_;
