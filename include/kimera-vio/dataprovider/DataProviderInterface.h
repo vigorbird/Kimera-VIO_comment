@@ -69,8 +69,7 @@ class DataProviderInterface {
   virtual void shutdown();
 
   // Register a callback function for IMU data
-  inline void registerImuSingleCallback(
-      const ImuSingleInputCallback& callback) {
+  inline void registerImuSingleCallback(const ImuSingleInputCallback& callback) {
     imu_single_callback_ = callback;
   }
 

@@ -46,7 +46,7 @@ MonoImuPipeline::MonoImuPipeline(const VioParams& params,
 
   data_provider_module_ = std::make_unique<MonoDataProviderModule>(
       &frontend_input_queue_, "Mono Data Provider", parallel_run_);
-      
+
   if (FLAGS_do_coarse_imu_camera_temporal_sync) {
     data_provider_module_->doCoarseImuCameraTemporalSync();
   }
@@ -81,30 +81,30 @@ MonoImuPipeline::MonoImuPipeline(const VioParams& params,
           FLAGS_visualize ? &display_input_queue_ : nullptr,
           FLAGS_log_output,
           params.odom_params_));
+
   vio_frontend_module_->registerImuTimeShiftUpdateCallback(
       [&](double imu_time_shift_s) {
         data_provider_module_->setImuTimeShift(imu_time_shift_s);
       });
 
+  //lamda表达式1！！！！！
   auto& backend_input_queue = backend_input_queue_;
   vio_frontend_module_->registerOutputCallback(
       [&backend_input_queue](const FrontendOutputPacketBase::Ptr& output) {
-        auto converted_output =
-            std::dynamic_pointer_cast<MonoFrontendOutput>(output);
-        CHECK(converted_output);
-        if (converted_output->is_keyframe_) {
-          //! Only push to Backend input queue if it is a keyframe!
-          backend_input_queue.push(std::make_unique<BackendInput>(
-              converted_output->frame_lkf_.timestamp_,
-              converted_output->status_mono_measurements_,
-              converted_output->pim_,
-              converted_output->imu_acc_gyrs_,
-              converted_output->body_lkf_OdomPose_body_kf_,
-              converted_output->body_kf_world_OdomVel_body_kf_));
-        } else {
-          VLOG(5)
-              << "Frontend did not output a keyframe, skipping Backend input.";
-        }
+            auto converted_output =  std::dynamic_pointer_cast<MonoFrontendOutput>(output);
+            CHECK(converted_output);
+            if (converted_output->is_keyframe_) {
+            //! Only push to Backend input queue if it is a keyframe!
+                backend_input_queue.push(std::make_unique<BackendInput>(converted_output->frame_lkf_.timestamp_,
+                                                                        converted_output->status_mono_measurements_,
+                                                                        converted_output->pim_,
+                                                                        converted_output->imu_acc_gyrs_,
+                                                                        converted_output->body_lkf_OdomPose_body_kf_,
+                                                                        converted_output->body_kf_world_OdomVel_body_kf_));
+            } else {
+            VLOG(5)
+                << "Frontend did not output a keyframe, skipping Backend input.";
+            }
       });
 
   //! Params for what the Backend outputs.
@@ -124,6 +124,7 @@ MonoImuPipeline::MonoImuPipeline(const VioParams& params,
   StereoCalibPtr stereo_calib(new gtsam::Cal3_S2Stereo(
       calib.fx(), calib.fy(), calib.skew(), calib.px(), calib.py(), 0.1));
   CHECK(backend_params_);
+
   vio_backend_module_ = std::make_unique<VioBackendModule>(
       &backend_input_queue_,
       parallel_run_,
@@ -138,15 +139,18 @@ MonoImuPipeline::MonoImuPipeline(const VioParams& params,
           FLAGS_log_output,
           params.odom_params_));
 
+   
   vio_backend_module_->registerOnFailureCallback(
       std::bind(&MonoImuPipeline::signalBackendFailure, this));
-
+  
+  //将注册函数进入后端函数！！！！！！！
   vio_backend_module_->registerImuBiasUpdateCallback(
       std::bind(&VisionImuFrontendModule::updateImuBias,
                 // Send a cref: constant reference bcs updateImuBias is const
                 std::cref(*CHECK_NOTNULL(vio_frontend_module_.get())),
                 std::placeholders::_1));
 
+  //将注册函数进入后端函数！！！！！！！
   vio_backend_module_->registerMapUpdateCallback(
       std::bind(&VisionImuFrontendModule::updateMap,
                 std::cref(*CHECK_NOTNULL(vio_frontend_module_.get())),

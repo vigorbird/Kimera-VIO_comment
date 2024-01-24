@@ -294,8 +294,10 @@ class MIMOPipelineModule : public PipelineModule<Input, Output> {
   using PIO = PipelineModule<Input, Output>;
   //! Callback used to send data to other pipeline modules, makes use of
   //! shared pointer since the data may be shared between several modules.
-  using OutputCallback =
-      std::function<void(const typename PIO::OutputSharedPtr& output)>;
+  //PIO 被定义为了 PipelineModule<Input, Output>;
+  //OutputSharedPtr = PipelineModule<Input, Output>;
+  // PIO::OutputSharedPtr = PipelineModule<Input, Output>::std::shared_ptr<Output>
+  using OutputCallback = std::function<void(const typename PIO::OutputSharedPtr& output)>;
 
   MIMOPipelineModule(const std::string& name_id, const bool& parallel_run)
       : PipelineModule<Input, Output>(name_id, parallel_run),
@@ -308,7 +310,7 @@ class MIMOPipelineModule : public PipelineModule<Input, Output> {
    * this module.
    * @param output_callback actual callback to register.
    */
-  //
+  //OutputCallback的定义为 输入数据类型为 PipelineModule<Input, Output>::std::shared_ptr<Output>
   virtual void registerOutputCallback(const OutputCallback& output_callback) {
     CHECK(output_callback);
     output_callbacks_.push_back(output_callback);
@@ -322,13 +324,11 @@ class MIMOPipelineModule : public PipelineModule<Input, Output> {
    * @param[out] output_packet  Parameter to be sent to others
    * @return boolean indicating whether the push was successful or not.
    */
-  bool pushOutputPacket(
-      typename PIO::OutputUniquePtr output_packet) const override {
+  bool pushOutputPacket(typename PIO::OutputUniquePtr output_packet) const override {
     auto tic_callbacks = utils::Timer::tic();
     //! We need to make our packet shared in order to send it to multiple
     //! other modules.
-    typename PIO::OutputSharedPtr shared_output_packet =
-        std::move(output_packet);
+    typename PIO::OutputSharedPtr shared_output_packet = std::move(output_packet);
     //! Call all callbacks
     for (const OutputCallback& callback : output_callbacks_) {
       CHECK(callback);
