@@ -51,9 +51,10 @@ MesherModule::InputUniquePtr MesherModule::getInputPacket() {
   CHECK(frontend_payload);
   CHECK(frontend_payload->is_keyframe_);
 
-  return std::make_unique<MesherInput>(
-      timestamp, frontend_payload, backend_payload);
-}
+  return std::make_unique<MesherInput>(timestamp, frontend_payload, backend_payload);
+}//end function getInputPacket
+
+
 
 MesherModule::OutputUniquePtr MesherModule::spinOnce(
     MesherInput::UniquePtr input) {

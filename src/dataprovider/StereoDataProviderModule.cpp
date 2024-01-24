@@ -32,11 +32,11 @@ StereoDataProviderModule::StereoDataProviderModule(
       right_frame_queue_("data_provider_right_frame_queue"),
       stereo_matching_params_(stereo_matching_params) {}
 
+
 StereoDataProviderModule::InputUniquePtr
 StereoDataProviderModule::getInputPacket() {
   //! Get left image + IMU data
-  MonoImuSyncPacket::UniquePtr mono_imu_sync_packet =
-      getMonoImuSyncPacket(false);
+  MonoImuSyncPacket::UniquePtr mono_imu_sync_packet =  getMonoImuSyncPacket(false);
   if (!mono_imu_sync_packet) {
     return nullptr;
   }
@@ -61,15 +61,15 @@ StereoDataProviderModule::getInputPacket() {
 
   if (!shutdown_) {
     CHECK(vio_pipeline_callback_);
-    vio_pipeline_callback_(std::make_unique<StereoImuSyncPacket>(
-        StereoFrame(left_frame_id,
-                    timestamp,
-                    *mono_imu_sync_packet->frame_,  // this copies...
-                    *right_frame_payload),          // this copies...
-        // be given in PipelineParams.
-        mono_imu_sync_packet->imu_stamps_,
-        mono_imu_sync_packet->imu_accgyrs_,
-        mono_imu_sync_packet->world_NavState_ext_odom_));
+    vio_pipeline_callback_(std::make_unique<StereoImuSyncPacket>( StereoFrame(left_frame_id,
+                                                                              timestamp,
+                                                                              *mono_imu_sync_packet->frame_,  // this copies...
+                                                                              *right_frame_payload),          // this copies...
+                                                                  // be given in PipelineParams.
+                                                                  mono_imu_sync_packet->imu_stamps_,
+                                                                  mono_imu_sync_packet->imu_accgyrs_,
+                                                                  mono_imu_sync_packet->world_NavState_ext_odom_)
+                          );
   }
 
   // Push the synced messages to the Frontend's input queue

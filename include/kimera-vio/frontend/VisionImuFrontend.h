@@ -60,8 +60,7 @@ class VisionImuFrontend {
   virtual ~VisionImuFrontend();
 
  public:
-  FrontendOutputPacketBase::UniquePtr spinOnce(
-      FrontendInputPacketBase::UniquePtr&& input);
+  FrontendOutputPacketBase::UniquePtr spinOnce(FrontendInputPacketBase::UniquePtr&& input);
 
   /* ------------------------------------------------------------------------ */
   // Update Imu Bias. This is thread-safe as imu_frontend_->updateBias is

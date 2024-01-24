@@ -80,7 +80,7 @@ class PipelineModuleBase {
     shutdown_ = false;
   }
 
-  inline bool isWorking() const { return is_thread_working_ || hasWork(); }
+  inline bool isWorking() const { return is_thread_working_ || hasWork(); }//整个代码中就这里调用了  hasWork函数
 
   /**
    * @brief registerOnFailureCallback Add an extra on-failure callback to the
@@ -193,13 +193,13 @@ class PipelineModule : public PipelineModuleBase {
     while (!shutdown_) {
       // Get input data from queue by waiting for payload.
       is_thread_working_ = false;
-      InputUniquePtr input = getInputPacket();
+      InputUniquePtr input = getInputPacket();//从input_queue_变量中pop一个要分发的数据
       is_thread_working_ = true;
       if (input) {
         auto tic = utils::Timer::tic();
         // Transfer the ownership of input to the actual pipeline module.
         // From this point on, you cannot use input, since spinOnce owns it.
-        OutputUniquePtr output = spinOnce(std::move(input));
+        OutputUniquePtr output = spinOnce(std::move(input));//好像do nothing 就只是返回了输入
         if (output) {
           // Received a valid output, send to output queue
           if (!pushOutputPacket(std::move(output))) {
@@ -209,7 +209,7 @@ class PipelineModule : public PipelineModuleBase {
           }
         } else {
           VLOG(1) << "Module: " << name_id_ << "  - Skipped sending an output.";
-          // Notify interested parties about failure.
+          // Notify interested parties about failure.x
           notifyOnFailure();
         }
         auto spin_duration = utils::Timer::toc(tic).count();
@@ -225,11 +225,11 @@ class PipelineModule : public PipelineModuleBase {
         is_thread_working_ = false;
         return true;
       }
-    }
+    }//end while 
     is_thread_working_ = false;
     VLOG(1) << "Module: " << name_id_ << " - Successful shutdown.";
     return false;
-  }
+  }//end spin!!!!!
 
  protected:
   /**
@@ -330,6 +330,7 @@ class MIMOPipelineModule : public PipelineModule<Input, Output> {
     //! other modules.
     typename PIO::OutputSharedPtr shared_output_packet = std::move(output_packet);
     //! Call all callbacks
+    //非常重要的函数！！！！！！！
     for (const OutputCallback& callback : output_callbacks_) {
       CHECK(callback);
       callback(shared_output_packet);

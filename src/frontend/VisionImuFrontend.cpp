@@ -47,8 +47,7 @@ VisionImuFrontend::~VisionImuFrontend() {
   LOG(INFO) << "VisionImuFrontend destructor called.";
 }
 
-FrontendOutputPacketBase::UniquePtr VisionImuFrontend::spinOnce(
-    FrontendInputPacketBase::UniquePtr&& input) {
+FrontendOutputPacketBase::UniquePtr VisionImuFrontend::spinOnce( FrontendInputPacketBase::UniquePtr&& input) {
   const FrontendState& frontend_state = frontend_state_;
   switch (frontend_state) {
     case FrontendState::Bootstrap:

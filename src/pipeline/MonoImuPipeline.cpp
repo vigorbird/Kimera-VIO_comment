@@ -94,8 +94,8 @@ MonoImuPipeline::MonoImuPipeline(const VioParams& params,
             auto converted_output =  std::dynamic_pointer_cast<MonoFrontendOutput>(output);
             CHECK(converted_output);
             if (converted_output->is_keyframe_) {
-            //! Only push to Backend input queue if it is a keyframe!
                 backend_input_queue.push(std::make_unique<BackendInput>(converted_output->frame_lkf_.timestamp_,
+            //! Only push to Backend input queue if it is a keyframe!
                                                                         converted_output->status_mono_measurements_,
                                                                         converted_output->pim_,
                                                                         converted_output->imu_acc_gyrs_,

@@ -194,6 +194,7 @@ bool Pipeline::waitForShutdown(const std::function<bool()>& data_done_cb,
   return true;
 }
 
+//
 void Pipeline::spinSequential() {
   // Spin once each pipeline module.
   CHECK(data_provider_module_);
@@ -319,7 +320,7 @@ void Pipeline::spinOnce(FrontendInputPacketBase::UniquePtr input) {
 
     if (!parallel_run_) {
       // Run the pipeline sequentially.
-      spinSequential();
+      spinSequential();//就在这个文件中被定义的！！！！
     }
   } else {
     LOG(WARNING) << "Not spinning pipeline as it's been shutdown.";
@@ -328,16 +329,14 @@ void Pipeline::spinOnce(FrontendInputPacketBase::UniquePtr input) {
 
 void Pipeline::launchThreads() {
   if (parallel_run_) {
-    frontend_thread_ = std::make_unique<std::thread>(
-        &VisionImuFrontendModule::spin,
-        CHECK_NOTNULL(vio_frontend_module_.get()));
+    frontend_thread_ = std::make_unique<std::thread>(&VisionImuFrontendModule::spin,
+                                                    CHECK_NOTNULL(vio_frontend_module_.get()));
 
     backend_thread_ = std::make_unique<std::thread>(
         &VioBackendModule::spin, CHECK_NOTNULL(vio_backend_module_.get()));
 
     if (mesher_module_) {
-      mesher_thread_ = std::make_unique<std::thread>(
-          &MesherModule::spin, CHECK_NOTNULL(mesher_module_.get()));
+      mesher_thread_ = std::make_unique<std::thread>( &MesherModule::spin, CHECK_NOTNULL(mesher_module_.get()));
     }
 
     if (lcd_module_) {

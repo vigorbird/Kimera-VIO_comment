@@ -36,7 +36,7 @@ DECLARE_bool(do_fine_imu_camera_temporal_sync);
 
 namespace VIO {
 
-//超长的构造函数！！！奶奶个腿的！！！
+//超长的构造函数！！！
 StereoImuPipeline::StereoImuPipeline(const VioParams& params,
                                      Visualizer3D::UniquePtr&& visualizer,
                                      DisplayBase::UniquePtr&& displayer,
@@ -50,7 +50,7 @@ StereoImuPipeline::StereoImuPipeline(const VioParams& params,
 
   //! Create DataProvider
   data_provider_module_ = std::make_unique<StereoDataProviderModule>(
-      &frontend_input_queue_,
+      &frontend_input_queue_,//非常重要的共享数据！！！！！！！
       "Stereo Data Provider",
       parallel_run_,
       // TODO(Toni): these params should not be sent...
@@ -92,16 +92,14 @@ StereoImuPipeline::StereoImuPipeline(const VioParams& params,
           params.odom_params_));
 
   auto& backend_input_queue = backend_input_queue_;  //! for the lambda below
-  vio_frontend_module_->registerImuTimeShiftUpdateCallback(
-      [&](double imu_time_shift_s) {
-        data_provider_module_->setImuTimeShift(imu_time_shift_s);
+  vio_frontend_module_->registerImuTimeShiftUpdateCallback([&](double imu_time_shift_s) {data_provider_module_->setImuTimeShift(imu_time_shift_s);
       });
 
-
+  //注册函数进入前端模块！！！！
+  //lamda表达式1函数！！！！！
   vio_frontend_module_->registerOutputCallback(
       [&backend_input_queue](const FrontendOutputPacketBase::Ptr& output) {
-        auto converted_output =
-            std::dynamic_pointer_cast<StereoFrontendOutput>(output);
+        auto converted_output = std::dynamic_pointer_cast<StereoFrontendOutput>(output);
         CHECK(converted_output);
 
         if (converted_output && converted_output->is_keyframe_) {
@@ -121,11 +119,9 @@ StereoImuPipeline::StereoImuPipeline(const VioParams& params,
 
   //! Params for what the Backend outputs.
   // TODO(Toni): put this into Backend params.
-  BackendOutputParams backend_output_params(
-      static_cast<VisualizationType>(FLAGS_viz_type) !=
-          VisualizationType::kNone,
-      FLAGS_min_num_obs_for_mesher_points,
-      FLAGS_visualize && FLAGS_visualize_lmk_type);
+  BackendOutputParams backend_output_params(static_cast<VisualizationType>(FLAGS_viz_type) !=  VisualizationType::kNone,
+                                            FLAGS_min_num_obs_for_mesher_points,
+                                            FLAGS_visualize && FLAGS_visualize_lmk_type);
 
   //! Create Backend
   CHECK(backend_params_);
@@ -142,26 +138,29 @@ StereoImuPipeline::StereoImuPipeline(const VioParams& params,
           backend_output_params,
           FLAGS_log_output,
           params.odom_params_));
-  vio_backend_module_->registerOnFailureCallback(
-      std::bind(&StereoImuPipeline::signalBackendFailure, this));
+
+  vio_backend_module_->registerOnFailureCallback(std::bind(&StereoImuPipeline::signalBackendFailure, this));
+
+  //注册函数进入后端
   vio_backend_module_->registerImuBiasUpdateCallback(
       std::bind(&VisionImuFrontendModule::updateImuBias,
                 // Send a cref: constant reference bcs updateImuBias is const
                 std::cref(*CHECK_NOTNULL(vio_frontend_module_.get())),
                 std::placeholders::_1));
+
+   //注册生成map模块进入后端！！！！
   vio_backend_module_->registerMapUpdateCallback(
       std::bind(&VisionImuFrontendModule::updateMap,
                 std::cref(*CHECK_NOTNULL(vio_frontend_module_.get())),
                 std::placeholders::_1));
 
-  if (static_cast<VisualizationType>(FLAGS_viz_type) ==
-      VisualizationType::kMesh2dTo3dSparse) {
+  //kMesh2dTo3dSparse含义：same as MESH2DTo3D but filters out triangles corresponding to non planar obstacles
+  if (static_cast<VisualizationType>(FLAGS_viz_type) ==  VisualizationType::kMesh2dTo3dSparse) {
     mesher_module_ = std::make_unique<MesherModule>(
         parallel_run_,
-        MesherFactory::createMesher(
-            MesherType::PROJECTIVE,
-            MesherParams(stereo_camera_->getBodyPoseLeftCamRect(),
-                         params.camera_params_.at(0u).image_size_)));
+        MesherFactory::createMesher( MesherType::PROJECTIVE,
+                                     MesherParams(stereo_camera_->getBodyPoseLeftCamRect(), params.camera_params_.at(0u).image_size_))
+    );
     //! Register input callbacks
     vio_backend_module_->registerOutputCallback(
         std::bind(&MesherModule::fillBackendQueue,
@@ -171,11 +170,9 @@ StereoImuPipeline::StereoImuPipeline(const VioParams& params,
     auto& mesher_module = mesher_module_;
     vio_frontend_module_->registerOutputCallback(
         [&mesher_module](const FrontendOutputPacketBase::Ptr& output) {
-          auto converted_output =
-              std::dynamic_pointer_cast<StereoFrontendOutput>(output);
+          auto converted_output = std::dynamic_pointer_cast<StereoFrontendOutput>(output);
           CHECK(converted_output);
-          CHECK_NOTNULL(mesher_module.get())
-              ->fillFrontendQueue(converted_output);
+          CHECK_NOTNULL(mesher_module.get())->fillFrontendQueue(converted_output);
         });
   }
 

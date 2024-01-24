@@ -127,7 +127,7 @@ bool EurocDataProvider::spin() {
     LOG_FIRST_N(INFO, 1) << "Running dataset between frame " << initial_k_
                          << " and frame " << final_k_;
     //非常重要的函数！！！实现了图像数据的数据分发！！！！               
-    while (!shutdown_ && spinOnce()) {
+    while (!shutdown_ && spinOnce()) {//spinonece函数就在下面实现的！！！！
       if (!vio_params_.parallel_run_) {
         // Return, instead of blocking, when running in sequential mode.
         return true;
@@ -155,8 +155,7 @@ bool EurocDataProvider::spinOnce() {
 
   const CameraParams& left_cam_info = vio_params_.camera_params_.at(0);
   const CameraParams& right_cam_info = vio_params_.camera_params_.at(1);
-  const bool& equalize_image =
-      vio_params_.frontend_params_.stereo_matching_params_.equalize_image_;
+  const bool& equalize_image = vio_params_.frontend_params_.stereo_matching_params_.equalize_image_;
 
   const Timestamp& timestamp_frame_k = timestampAtFrame(current_k_);
   VLOG(10) << "Sending left/right frames k= " << current_k_
@@ -169,26 +168,23 @@ bool EurocDataProvider::spinOnce() {
   bool available_left_img = getLeftImgName(current_k_, &left_img_filename);
   std::string right_img_filename;
   bool available_right_img = getRightImgName(current_k_, &right_img_filename);
+
   if (available_left_img && available_right_img) {
     // Both stereo images are available, send data to VIO
     CHECK(left_frame_callback_);
-    left_frame_callback_(
-        std::make_unique<Frame>(current_k_,
-                                timestamp_frame_k,
-                                // TODO(Toni): this info should be passed to
-                                // the camera... not all the time here...
-                                left_cam_info,
-                                UtilsOpenCV::ReadAndConvertToGrayScale(
-                                    left_img_filename, equalize_image)));
+    left_frame_callback_(std::make_unique<Frame>(current_k_,
+                                                  timestamp_frame_k,
+                                                  // TODO(Toni): this info should be passed to
+                                                  // the camera... not all the time here...
+                                                  left_cam_info,
+                                                  UtilsOpenCV::ReadAndConvertToGrayScale(left_img_filename, equalize_image)));
     CHECK(right_frame_callback_);
-    right_frame_callback_(
-        std::make_unique<Frame>(current_k_,
-                                timestamp_frame_k,
-                                // TODO(Toni): this info should be passed to
-                                // the camera... not all the time here...
-                                right_cam_info,
-                                UtilsOpenCV::ReadAndConvertToGrayScale(
-                                    right_img_filename, equalize_image)));
+    right_frame_callback_(std::make_unique<Frame>(current_k_, 
+                                                  timestamp_frame_k,
+                                                  // TODO(Toni): this info should be passed to
+                                                  // the camera... not all the time here...
+                                                  right_cam_info,
+                                                  UtilsOpenCV::ReadAndConvertToGrayScale(right_img_filename, equalize_image)));
   } else {
     LOG(ERROR) << "Missing left/right stereo pair, proceeding to the next one.";
   }

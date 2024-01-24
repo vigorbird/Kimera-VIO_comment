@@ -36,8 +36,7 @@ enum class VisualizerType {
 };
 
 enum class VisualizationType {
-  kMesh2dTo3dSparse = 0,  // same as MESH2DTo3D but filters out triangles
-                          // corresponding to non planar obstacles
+  kMesh2dTo3dSparse = 0,  // same as MESH2DTo3D but filters out triangles corresponding to non planar obstacles
   kPointcloud = 1,        // visualize 3D VIO points  (no repeated point)
   kNone = 2               // does not visualize map
 };

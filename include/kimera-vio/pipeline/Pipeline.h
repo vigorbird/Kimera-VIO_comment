@@ -213,8 +213,7 @@ class Pipeline {
     is_backend_ok_ = false;
   }
 
-  inline void registerBackendOutputCallback(
-      const VioBackendModule::OutputCallback& callback) {
+  inline void registerBackendOutputCallback(const VioBackendModule::OutputCallback& callback) {
     CHECK(vio_backend_module_);
     vio_backend_module_->registerOutputCallback(callback);
   }
@@ -225,6 +224,7 @@ class Pipeline {
     vio_frontend_module_->registerOutputCallback(callback);
   }
 
+  //好像全局没有被使用这个函数！！！！！
   inline void registerMesherOutputCallback(
       const MesherModule::OutputCallback& callback) {
     if (mesher_module_) {

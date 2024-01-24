@@ -129,10 +129,8 @@ int main(int argc, char* argv[]) {
   auto tic = VIO::utils::Timer::tic();
   bool is_pipeline_successful = false;
   if (vio_params.parallel_run_) {
-    auto handle = std::async(
-        std::launch::async, &VIO::DataProviderInterface::spin, dataset_parser);
-    auto handle_pipeline =
-        std::async(std::launch::async, &VIO::Pipeline::spin, vio_pipeline);
+    auto handle = std::async( std::launch::async, &VIO::DataProviderInterface::spin, dataset_parser);
+    auto handle_pipeline = std::async(std::launch::async, &VIO::Pipeline::spin, vio_pipeline);
     auto handle_shutdown = std::async(
         std::launch::async,
         &VIO::Pipeline::waitForShutdown,
@@ -146,6 +144,7 @@ int main(int argc, char* argv[]) {
     handle_pipeline.get();
   } else {
     // 非常重要的函数！！！！在这里面进行的数据分发！！！！！！！！！
+    //搜索 bool Pipeline::spin() {
     while (dataset_parser->spin() && vio_pipeline->spin()) {
       continue;
     };
