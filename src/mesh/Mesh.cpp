@@ -503,6 +503,7 @@ void Mesh<VertexPositionType>::save(const std::string& filepath) const {
   cv::FileStorage fs(filepath, cv::FileStorage::WRITE);
   fs << "vertex_to_lmk_id_map"
      << "[";
+  //保存的是特征点与mesh顶点的索引关系
   for (auto&& [vertex, lmk] : vertex_to_lmk_id_map_) {
     fs << "{";
     fs << "v" << static_cast<int>(vertex) << "l" << static_cast<int>(lmk);
@@ -512,6 +513,7 @@ void Mesh<VertexPositionType>::save(const std::string& filepath) const {
 
   fs << "lmk_id_to_vertex_map"
      << "[";
+  //lmk_id_to_vertex_map_ 保存的是索引
   for (auto&& [lmk, vertex] : lmk_id_to_vertex_map_) {
     fs << "{";
     fs << "l" << static_cast<int>(lmk) << "v" << static_cast<int>(vertex);
@@ -519,13 +521,13 @@ void Mesh<VertexPositionType>::save(const std::string& filepath) const {
   }
   fs << "]";
 
-  fs << "vertices_mesh" << vertices_mesh_;
+  fs << "vertices_mesh" << vertices_mesh_;//顶点矩阵
   fs << "vertices_mesh_normal" << vertices_mesh_normal_;
   fs << "normals_computed" << normals_computed_;
   fs << "vertices_mesh_color" << vertices_mesh_color_;
-  fs << "polygons_mesh" << polygons_mesh_;
-  fs << "adjacency_matrix" << adjacency_matrix_;
-  fs << "polygon_dimension" << static_cast<int>(polygon_dimension_);
+  fs << "polygons_mesh" << polygons_mesh_;//多边形有几个顶点，每个顶点对应的顶点序号
+  // fs << "adjacency_matrix" << adjacency_matrix_;//表示哪两个顶点是否相邻
+  fs << "polygon_dimension" << static_cast<int>(polygon_dimension_);//一共有几个多边形
   fs << "}";
 }
 

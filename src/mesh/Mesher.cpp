@@ -217,8 +217,9 @@ Mesher::Mesher(const MesherParams& mesher_params, const bool& serialize_meshes)
 }
 
 MesherOutput::UniquePtr Mesher::spinOnce(const MesherInput& input) {
-  MesherOutput::UniquePtr mesher_output_payload =
-      std::make_unique<MesherOutput>(input.timestamp_);
+
+  MesherOutput::UniquePtr mesher_output_payload = std::make_unique<MesherOutput>(input.timestamp_);
+
   updateMesh3D(
       input,
       // TODO REMOVE THIS FLAG MAKE MESH_2D Optional!
@@ -226,14 +227,18 @@ MesherOutput::UniquePtr Mesher::spinOnce(const MesherInput& input) {
       // These are more or less
       // the same info as mesh_2d_
       &(mesher_output_payload->mesh_2d_for_viz_));
+
+
   // Serialize 2D/3D Mesh if requested
   if (serialize_meshes_) {
     LOG_FIRST_N(WARNING, 1) << "Mesh serialization enabled.";
     serializeMeshes();
   }
+
   // TODO(Toni): remove these calls, since all info is in mesh_3d_...
-  getVerticesMesh(&(mesher_output_payload->vertices_mesh_));
-  getPolygonsMesh(&(mesher_output_payload->polygons_mesh_));
+  //给输出变量赋值
+  getVerticesMesh(&(mesher_output_payload->vertices_mesh_));//取出vertices_mesh_ 赋值给mesher_output_payload->vertices_mesh_
+  getPolygonsMesh(&(mesher_output_payload->polygons_mesh_));//取出polygons_mesh_ 赋值给mesher_output_payload->polygons_mesh_
   mesher_output_payload->mesh_3d_ = mesh_3d_;
   return mesher_output_payload;
 }
@@ -1515,28 +1520,25 @@ void Mesher::updateMesh3D(const PointsWithIdMap& points_with_id_VIO,
 /* -------------------------------------------------------------------------- */
 // Update mesh, but in a thread-safe way.
 // TODO(TONI): this seems completely unnecessary
-void Mesher::updateMesh3D(const MesherInput& mesher_payload,
+void Mesher::updateMesh3D(const MesherInput& mesher_payload,//从外部输入的数据
                           Mesh2D* mesh_2d,
                           std::vector<cv::Vec6f>* mesh_2d_for_viz) {
-  const StereoFrame& stereo_frame =
-      mesher_payload.frontend_output_->stereo_frame_lkf_;
-  const StatusKeypointsCV& right_keypoints =
-      stereo_frame.right_keypoints_rectified_;
+  const StereoFrame& stereo_frame =  mesher_payload.frontend_output_->stereo_frame_lkf_;
+  const StatusKeypointsCV& right_keypoints = stereo_frame.right_keypoints_rectified_;
   std::vector<KeypointStatus> right_keypoint_status;
   right_keypoint_status.reserve(right_keypoints.size());
   for (const StatusKeypointCV& kpt : right_keypoints) {
     right_keypoint_status.push_back(kpt.first);
   }
 
-  updateMesh3D(mesher_payload.backend_output_->landmarks_with_id_map_,
+  updateMesh3D(mesher_payload.backend_output_->landmarks_with_id_map_,//
                stereo_frame.left_frame_.keypoints_,
                right_keypoint_status,
                stereo_frame.keypoints_3d_,
                stereo_frame.left_frame_.landmarks_,
-               mesher_payload.backend_output_->W_State_Blkf_.pose_.compose(
-                   mesher_params_.B_Pose_camLrect_),
-               mesh_2d,
-               mesh_2d_for_viz);
+               mesher_payload.backend_output_->W_State_Blkf_.pose_.compose(mesher_params_.B_Pose_camLrect_),
+               mesh_2d,//for output
+               mesh_2d_for_viz);//for output
 }
 
 /* -------------------------------------------------------------------------- */
