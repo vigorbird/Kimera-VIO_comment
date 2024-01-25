@@ -286,7 +286,7 @@ class Mesh {
   VertexToLmkIdMap vertex_to_lmk_id_map_;
 
   // LmkId to Vertex Map
-  LmkIdToVertexMap lmk_id_to_vertex_map_;
+  LmkIdToVertexMap lmk_id_to_vertex_map_;//std::map<LandmarkId, VertexId>
 
   // Vertices 3D.
   // Set of (non-repeated) 3d points.
@@ -297,6 +297,8 @@ class Mesh {
   // Format: n rows (one for each point), with each row being a CV_32FC3.
   // where n should be the same number as rows for vertices_mesh_.
   // One normal per vertex.
+  // typedef cv::Point3f VertexNormal;
+  //typedef std::vector<VertexNormal> VertexNormal每个点对应的法向量
   VertexNormals vertices_mesh_normal_;
   // If the normals have been computed;
   bool normals_computed_ = false;

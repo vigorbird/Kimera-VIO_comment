@@ -96,6 +96,7 @@ void Mesh<VertexPositionType>::addPolygonToMesh(const Polygon& polygon) {
   // do not add a new triangle connectivity-wise).
   VertexIds vtx_ids;
   bool triangle_maybe_already_in_mesh = true;
+  //1.
   for (const VertexType& vertex : polygon) {
     const LandmarkId& lmk_id = vertex.getLmkId();
     VertexId existing_vtx_id;
@@ -203,7 +204,7 @@ void Mesh<VertexPositionType>::addPolygonToMesh(const Polygon& polygon) {
     CHECK(it != face_hashes_.end());
     CHECK(face_hashes_[face_hash]);
   }
-}
+}//end function addPolygonToMesh
 
 // Updates mesh data structures incrementally, by adding new landmark
 // if there was no previous id, or updating it if it was already present.
@@ -330,12 +331,13 @@ bool Mesh<VertexPosition>::getVertex(const LandmarkId& lmk_id,
 /* --------------------------------------------------------------------------
  */
 // Retrieve per vertex normals of the mesh.
+//
 template <typename VertexPositionType>
 void Mesh<VertexPositionType>::computePerVertexNormals() {
   CHECK_EQ(polygon_dimension_, 3) << "Normals are only valid for dim 3 meshes.";
   LOG_IF(ERROR, normals_computed_) << "Normals have been computed already...";
 
-  size_t n_vtx = getNumberOfUniqueVertices();
+  size_t n_vtx = getNumberOfUniqueVertices();//mesh所有顶点的数量！！！
   std::vector<int> counts(n_vtx, 0);
 
   // Set all per-vertex normals in mesh to 0, since we want to average
@@ -346,6 +348,7 @@ void Mesh<VertexPositionType>::computePerVertexNormals() {
 
   // Walk through triangles and compute averaged vertex normals.
   Polygon polygon;
+  //遍历所有的边
   for (size_t i = 0; i < getNumberOfPolygons(); i++) {
     CHECK(getPolygon(i, &polygon)) << "Could not retrieve polygon.";
     CHECK_EQ(polygon.size(), 3);
@@ -375,26 +378,19 @@ void Mesh<VertexPositionType>::computePerVertexNormals() {
 
     // Compute per vertex averaged normals.
     /// Indices of vertices
+    //std::map<LandmarkId, VertexId> lmk_id_to_vertex_map_
     const VertexId& p1_idx = lmk_id_to_vertex_map_.at(polygon.at(0).getLmkId());
     const VertexId& p2_idx = lmk_id_to_vertex_map_.at(polygon.at(1).getLmkId());
     const VertexId& p3_idx = lmk_id_to_vertex_map_.at(polygon.at(2).getLmkId());
     /// Sum of normals per vertex
-    vertices_mesh_normal_.at(p1_idx) =
-        (counts.at(p1_idx) * vertices_mesh_normal_.at(p1_idx) + normal) /
-        (counts.at(p1_idx) + 1.0);
-    vertices_mesh_normal_.at(p2_idx) =
-        counts.at(p2_idx) * vertices_mesh_normal_.at(p2_idx) +
-        normal / (counts.at(p2_idx) + 1.0);
-    vertices_mesh_normal_.at(p3_idx) =
-        counts.at(p3_idx) * vertices_mesh_normal_.at(p3_idx) +
-        normal / (counts.at(p3_idx) + 1.0);
+    vertices_mesh_normal_.at(p1_idx) =(counts.at(p1_idx) * vertices_mesh_normal_.at(p1_idx) + normal) / (counts.at(p1_idx) + 1.0);
+    vertices_mesh_normal_.at(p2_idx) = counts.at(p2_idx) * vertices_mesh_normal_.at(p2_idx) + normal / (counts.at(p2_idx) + 1.0);
+    vertices_mesh_normal_.at(p3_idx) = counts.at(p3_idx) * vertices_mesh_normal_.at(p3_idx) + normal / (counts.at(p3_idx) + 1.0);
     // assumes non-zero normals...
-    vertices_mesh_normal_.at(p1_idx) /=
-        cv::norm(vertices_mesh_normal_.at(p1_idx));
-    vertices_mesh_normal_.at(p2_idx) /=
-        cv::norm(vertices_mesh_normal_.at(p2_idx));
-    vertices_mesh_normal_.at(p3_idx) /=
-        cv::norm(vertices_mesh_normal_.at(p3_idx));
+    //进行归一化操作
+    vertices_mesh_normal_.at(p1_idx) /= cv::norm(vertices_mesh_normal_.at(p1_idx));
+    vertices_mesh_normal_.at(p2_idx) /= cv::norm(vertices_mesh_normal_.at(p2_idx));
+    vertices_mesh_normal_.at(p3_idx) /= cv::norm(vertices_mesh_normal_.at(p3_idx));
     /// Increase counts of normals added per vertex
     counts.at(p1_idx)++;
     counts.at(p2_idx)++;
@@ -429,8 +425,7 @@ bool Mesh<VertexPositionType>::setVertexColor(
 }
 
 template <typename VertexPositionType>
-bool Mesh<VertexPositionType>::setVertexPosition(
-    const LandmarkId& lmk_id,
+bool Mesh<VertexPositionType>::setVertexPosition(const LandmarkId& lmk_id,
     const VertexPositionType& vertex) {
   const auto& lmk_id_to_vertex_map_end = lmk_id_to_vertex_map_.end();
   const auto& vertex_it = lmk_id_to_vertex_map_.find(lmk_id);

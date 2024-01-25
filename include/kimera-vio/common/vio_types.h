@@ -65,8 +65,7 @@ using KeypointsCV = std::vector<KeypointCV>;
 using StatusKeypointCV = std::pair<KeypointStatus, KeypointCV>;
 using StatusKeypointsCV = std::vector<StatusKeypointCV>;
 using BearingVector = gtsam::Vector3;
-using BearingVectors =
-    std::vector<BearingVector, Eigen::aligned_allocator<BearingVector>>;
+using BearingVectors = std::vector<BearingVector, Eigen::aligned_allocator<BearingVector>>;
 
 // Add way of printing strongly typed enums (enum class).
 template <typename E>

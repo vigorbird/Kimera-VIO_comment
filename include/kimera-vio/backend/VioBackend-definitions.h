@@ -337,7 +337,7 @@ struct BackendOutput : public PipelinePayload {
   const FrameId cur_kf_id_;
   const int landmark_count_;
   const DebugVioInfo debug_info_;
-  const PointsWithIdMap landmarks_with_id_map_;
+  const PointsWithIdMap landmarks_with_id_map_;//是一个map数据结构，key = landmark的id， value = 3d坐标
   const LmkIdToLmkTypeMap lmk_id_to_lmk_type_map_;
 };
 

@@ -223,7 +223,7 @@ MesherOutput::UniquePtr Mesher::spinOnce(const MesherInput& input) {
   updateMesh3D(
       input,
       // TODO REMOVE THIS FLAG MAKE MESH_2D Optional!
-      FLAGS_return_mesh_2d ? &(mesher_output_payload->mesh_2d_) : nullptr,
+      FLAGS_return_mesh_2d ? &(mesher_output_payload->mesh_2d_) : nullptr,//好像输出的这个变量只是为了可视化进行调试时候看
       // These are more or less
       // the same info as mesh_2d_
       &(mesher_output_payload->mesh_2d_for_viz_));
@@ -237,8 +237,8 @@ MesherOutput::UniquePtr Mesher::spinOnce(const MesherInput& input) {
 
   // TODO(Toni): remove these calls, since all info is in mesh_3d_...
   //给输出变量赋值
-  getVerticesMesh(&(mesher_output_payload->vertices_mesh_));//取出vertices_mesh_ 赋值给mesher_output_payload->vertices_mesh_
-  getPolygonsMesh(&(mesher_output_payload->polygons_mesh_));//取出polygons_mesh_ 赋值给mesher_output_payload->polygons_mesh_
+  getVerticesMesh(&(mesher_output_payload->vertices_mesh_));//取出vertices_mesh_ 赋值给mesher_output_payload->vertices_mesh_：存储的全是顶点
+  getPolygonsMesh(&(mesher_output_payload->polygons_mesh_));//取出polygons_mesh_ 赋值给mesher_output_payload->polygons_mesh_：存储的全是面片的索引
   mesher_output_payload->mesh_3d_ = mesh_3d_;
   return mesher_output_payload;
 }
@@ -463,32 +463,35 @@ bool Mesher::isBadTriangle(
 // landmarks ids.
 void Mesher::populate3dMeshTimeHorizon(
     // cv::Vec6f assumes triangular mesh.
-    const std::vector<cv::Vec6f>& mesh_2d_pixels,
-    const PointsWithIdMap& points_with_id_map,
-    const KeypointsCV& keypoints,
-    const LandmarkIds& landmarks,
-    const gtsam::Pose3& left_cam_pose,
+    const std::vector<cv::Vec6f>& mesh_2d_pixels,//在左图像上的图像三角面片
+    const PointsWithIdMap& points_with_id_map,//输入变量， key = landmark的id， value = 3d坐标
+    const KeypointsCV& keypoints,//输入变量左相机对应的2d特征点坐标,索引和landmarks一致
+    const LandmarkIds& landmarks,//输入变量，应该是左相机观测到的地图点索引
+    const gtsam::Pose3& left_cam_pose,//左相机的绝对位姿
     double min_ratio_largest_smallest_side,
     double min_elongation_ratio,
     double max_triangle_side,
-    Mesh2D* mesh_2d) {
+    Mesh2D* mesh_2d) {//整个大函数的输出变量
+
   VLOG(10) << "Starting populate3dMeshTimeHorizon...";
   VLOG(10) << "Starting populate3dMesh...";
-  populate3dMesh(mesh_2d_pixels,
-                 points_with_id_map,
-                 keypoints,
-                 landmarks,
-                 left_cam_pose,
+  //这个函数除了会输出mesh_2d，还会更新成员变量mesh_3d_ 
+  populate3dMesh(mesh_2d_pixels,//在左图像上的图像三角面片
+                 points_with_id_map,//输入变量， key = landmark的id， value = 3d坐标
+                 keypoints,//输入变量左相机对应的2d特征点坐标,索引和landmarks一致
+                 landmarks,//输入变量，应该是左相机观测到的地图点索引
+                 left_cam_pose,//左相机的绝对位姿
                  min_ratio_largest_smallest_side,
                  min_elongation_ratio,
                  max_triangle_side,
-                 mesh_2d);
+                 mesh_2d);//整个大函数的输出变量
   VLOG(10) << "Finished populate3dMesh.";
   // Remove faces in the mesh that have vertices which are not in
   // points_with_id_map anymore.
   VLOG(10) << "Starting updatePolygonMeshToTimeHorizon...";
-  updatePolygonMeshToTimeHorizon(points_with_id_map,
-                                 left_cam_pose,
+  //这个函数会更新成员变量mesh_3d_ 
+  updatePolygonMeshToTimeHorizon(points_with_id_map,//输入变量， key = landmark的id， value = 3d坐标
+                                 left_cam_pose,//左相机的绝对位姿
                                  min_ratio_largest_smallest_side,
                                  max_triangle_side,
                                  FLAGS_reduce_mesh_to_time_horizon);
@@ -498,15 +501,18 @@ void Mesher::populate3dMeshTimeHorizon(
 
 /* -------------------------------------------------------------------------- */
 // Create a 3D mesh from 2D corners in an image.
-void Mesher::populate3dMesh(const std::vector<cv::Vec6f>& mesh_2d_pixels,
-                            const PointsWithIdMap& points_with_id_map,
-                            const KeypointsCV& keypoints,
-                            const LandmarkIds& landmarks,
-                            const gtsam::Pose3& left_cam_pose,
+//遍历所有的三角网格，找到这些二维三角网格对应的空间3维点坐标
+//并构建空间三维网格，使用新的网格去更新mesh（调用函数：addPolygonToMesh）
+//会更新成员变量mesh_3d_ 
+void Mesher::populate3dMesh(const std::vector<cv::Vec6f>& mesh_2d_pixels,//在左图像上的图像三角面片
+                            const PointsWithIdMap& points_with_id_map,//输入变量， key = landmark的id， value = 3d坐标
+                            const KeypointsCV& keypoints,//输入变量左相机对应的2d特征点坐标,索引和landmarks一致
+                            const LandmarkIds& landmarks,//输入变量，应该是左相机观测到的地图点索引
+                            const gtsam::Pose3& left_cam_pose,//左相机的绝对位姿
                             double min_ratio_largest_smallest_side,
                             double min_elongation_ratio,
                             double max_triangle_side,
-                            Mesh2D* mesh_2d) {
+                            Mesh2D* mesh_2d) {//整个大函数的输出变量
   // Iterate over each face in the 2d mesh, and generate the 3d mesh.
   // TODO to retrieve lmk id from pixels, do it in the stereo frame! not here.
 
@@ -515,40 +521,45 @@ void Mesher::populate3dMesh(const std::vector<cv::Vec6f>& mesh_2d_pixels,
          "cannot generate 3D Mesh.";
 
   // Create face and add it to the 2d mesh.
-  Mesh2D::Polygon face;
+  //我觉得这个变量作者定义为polygon_2d比较合适
+  Mesh2D::Polygon face;//typedef std::vector<VertexType> Polygon;
   face.resize(3);
 
   // Clean output 2d mesh.
   if (mesh_2d != nullptr) mesh_2d->clearMesh();
 
   // Create polygon and add it to the 3d mesh.
-  Mesh3D::Polygon polygon;
+  Mesh3D::Polygon polygon;//typedef std::vector<VertexType> Polygon;
   polygon.resize(3);
 
   // Iterate over the 2d mesh triangles.
+  //遍历所有的像素点
   for (size_t i = 0u; i < mesh_2d_pixels.size(); i++) {
+
     const cv::Vec6f& triangle_2d = mesh_2d_pixels.at(i);
 
     // Iterate over each vertex (pixel) of the triangle.
     // Triangle_2d.rows = 3.
     for (size_t j = 0u; j < triangle_2d.rows / 2u; j++) {
+
       // Extract pixel.
-      const cv::Point2f pixel(triangle_2d[j * 2u], triangle_2d[j * 2u + 1u]);
+      const cv::Point2f pixel(triangle_2d[j * 2u], triangle_2d[j * 2u + 1u]);//遍历某个 像素点坐标
 
       // Extract landmark id corresponding to this pixel.
-      const LandmarkId& lmk_id(
-          Frame::findLmkIdFromPixel(pixel, keypoints, landmarks));
+      //找到这个像素坐标对应的landmark序号！！！！
+      const LandmarkId& lmk_id( Frame::findLmkIdFromPixel(pixel, 
+                                                          keypoints, //输入变量左相机对应的2d特征点坐标,索引和landmarks一致
+                                                          landmarks) );//输入变量，应该是左相机观测到的地图点索引
       if (lmk_id == -1) {
         // CHECK_NE(lmk_id, -1) << "Could not find lmk_id: " << lmk_id
         //  << " for pixel: " << pixel << " in keypoints:\n "
         //  << keypoints;
-        LOG(ERROR) << "Could not find lmk_id: " << lmk_id
-                   << " for pixel: " << pixel;
+        LOG(ERROR) << "Could not find lmk_id: " << lmk_id << " for pixel: " << pixel;
         break;
       }
 
       // Try to find this landmark id in points_with_id_map.
-      const auto& lmk_it = points_with_id_map.find(lmk_id);
+      const auto& lmk_it = points_with_id_map.find(lmk_id);//根据landmark序号找到对应的3d点坐标
       if (lmk_it != points_with_id_map.end()) {
         // We found the landmark.
         // Extract 3D position of the landmark.
@@ -558,7 +569,8 @@ void Mesher::populate3dMesh(const std::vector<cv::Vec6f>& mesh_2d_pixels,
                         static_cast<float>(point.z()));
         // Add landmark as one of the vertices of the current polygon in 3D.
         DCHECK_LT(j, polygon.size());
-        polygon.at(j) = Mesh3D::VertexType(lmk_id, lmk);
+        //typedef Vertex<VertexPosition> VertexType;
+        polygon.at(j) = Mesh3D::VertexType(lmk_id, lmk);//顶点有很多属性：例如位置坐标信息，对应地图点的序号、颜色法向量等等
         if (mesh_2d != nullptr) {
           face.at(j) = Mesh2D::VertexType(lmk_id, pixel);
         }
@@ -573,9 +585,9 @@ void Mesher::populate3dMesh(const std::vector<cv::Vec6f>& mesh_2d_pixels,
                              max_triangle_side)) {
             // Save the valid triangular polygon, since it has all vertices in
             // points_with_id_map.
-            mesh_3d_.addPolygonToMesh(polygon);
+            mesh_3d_.addPolygonToMesh(polygon);//非常重要的函数！！！！！
             if (mesh_2d != nullptr) {
-              mesh_2d->addPolygonToMesh(face);
+              mesh_2d->addPolygonToMesh(face);//非常重要的函数！！！！！
             }
           }
         }
@@ -589,17 +601,19 @@ void Mesher::populate3dMesh(const std::vector<cv::Vec6f>& mesh_2d_pixels,
       }
     }
   }
-}
+
+}//end function populate3dMesh
 
 /* -------------------------------------------------------------------------- */
 // TODO the polygon_mesh has repeated faces...
 // And this seems to slow down quite a bit the for loop!
 void Mesher::updatePolygonMeshToTimeHorizon(
-    const PointsWithIdMap& points_with_id_map,
-    const gtsam::Pose3& leftCameraPose,
+    const PointsWithIdMap& points_with_id_map,//输入变量， key = landmark的id， value = 3d坐标
+    const gtsam::Pose3& leftCameraPose,//左相机的绝对位姿
     double min_ratio_largest_smallest_side,
     double max_triangle_side,
     const bool& reduce_mesh_to_time_horizon) {
+
   VLOG(10) << "Starting updatePolygonMeshToTimeHorizon...";
   LOG_IF(WARNING, points_with_id_map.size() == 0u)
       << "Missing landmark information for the Mesher: "
@@ -609,9 +623,12 @@ void Mesher::updatePolygonMeshToTimeHorizon(
   // Loop over each face in the mesh.
   Mesh3D::Polygon polygon;
   Mesh3D mesh_output;
+  //遍历所有三维空间的三角形
+  //更新空间所有三维三角形的顶点坐标
   for (size_t i = 0; i < mesh_3d_.getNumberOfPolygons(); i++) {
     CHECK(mesh_3d_.getPolygon(i, &polygon)) << "Could not retrieve polygon.";
     bool save_polygon = true;
+    //遍历这个三角形的顶点
     for (Mesh3D::VertexType& vertex : polygon) {
       const auto& point_with_id_it = points_with_id_map.find(vertex.getLmkId());
       if (point_with_id_it == end) {
@@ -630,20 +647,22 @@ void Mesher::updatePolygonMeshToTimeHorizon(
         // This is to ensure we have latest update, the previous
         // addPolygonToMesh only updates the positions of the vertices in the
         // visible frame.
+        //typedef cv::Point3f Vertex3D;
         vertex.setVertexPosition(Vertex3D(point_with_id_it->second.x(),
                                           point_with_id_it->second.y(),
                                           point_with_id_it->second.z()));
       }
     }
 
+    //如果想要实时跑 是不可能进入这个条件的，因为mesh是没有办法实时更新的
     if (save_polygon) {
       // Refilter polygons, as the updated vertices might make it unvalid.
-      if (!isBadTriangle(
-              polygon,
-              leftCameraPose,
-              min_ratio_largest_smallest_side,
-              -1.0,  // elongation test is invalid, no per-frame concept
-              max_triangle_side)) {
+      if (!isBadTriangle(polygon,
+                        leftCameraPose,
+                        min_ratio_largest_smallest_side,
+                        -1.0,  // elongation test is invalid, no per-frame concept
+                        max_triangle_side)) 
+      {
         // Finally add the polygon to the mesh.
         mesh_output.addPolygonToMesh(polygon);
       }
@@ -1448,18 +1467,18 @@ void Mesher::associatePlanes(const std::vector<Plane>& segmented_planes,
 /* -------------------------------------------------------------------------- */
 // Update mesh: update structures keeping memory of the map before visualization
 // Optional parameter is the mesh in 2D for visualization.
-void Mesher::updateMesh3D(const PointsWithIdMap& points_with_id_VIO,
-                          const KeypointsCV& keypoints,
-                          const std::vector<KeypointStatus>& keypoints_status,
-                          const BearingVectors& keypoints_3d,
-                          const LandmarkIds& landmarks,
-                          const gtsam::Pose3& left_camera_pose,
-                          Mesh2D* mesh_2d,
-                          std::vector<cv::Vec6f>* mesh_2d_for_viz) {
+void Mesher::updateMesh3D(const PointsWithIdMap& points_with_id_VIO,//key = landmark的id， value = 3d坐标
+                          const KeypointsCV& keypoints,//左相机对应的2d特征点坐标
+                          const std::vector<KeypointStatus>& keypoints_status,//右相机每个特征点对应的状态
+                          const BearingVectors& keypoints_3d,//应该是左右相机匹配的特征点在相机坐标系下的3d坐标
+                          const LandmarkIds& landmarks,//应该是左相机观测到的地图点索引
+                          const gtsam::Pose3& left_camera_pose,//应该是左相机在世界坐标系下的位姿
+                          Mesh2D* mesh_2d,//输出变量
+                          std::vector<cv::Vec6f>* mesh_2d_for_viz)//输出变量
+{
   VLOG(10) << "Starting updateMesh3D...";
-  LOG_IF(WARNING, points_with_id_VIO.size() == 0u)
-      << "Missing landmark information to build 3D Mesh.";
-  const PointsWithIdMap* points_with_id_all = &points_with_id_VIO;
+  LOG_IF(WARNING, points_with_id_VIO.size() == 0u)<< "Missing landmark information to build 3D Mesh.";
+  const PointsWithIdMap* points_with_id_all = &points_with_id_VIO;//key = landmark的id， value = 3d坐标
 
   // Get points in stereo camera that are not in vio but have lmk id:
   PointsWithIdMap points_with_id_stereo;
@@ -1469,15 +1488,16 @@ void Mesher::updateMesh3D(const PointsWithIdMap& points_with_id_VIO,
     // WARNING some stereo and vio lmks share the same id, so adding order
     // matters! first add vio points, then stereo, so that vio points have
     // preference over stereo ones if they are repeated!
-    static constexpr bool kAppendStereoLmks = true;
+    static constexpr bool kAppendStereoLmks = true;//整个代码就这里使用了kAppendStereoLmks
     if (kAppendStereoLmks) {
-      points_with_id_stereo = points_with_id_VIO;
+      points_with_id_stereo = points_with_id_VIO;//key = landmark的id， value = 3d坐标
     }
-    appendNonVioStereoPoints(landmarks,
-                             keypoints_status,
-                             keypoints_3d,
-                             left_camera_pose,
-                             &points_with_id_stereo);
+    //1.这个函数应该是将左右相机匹配得到的地图点加入到整体索引中
+    appendNonVioStereoPoints(landmarks,//应该是左相机观测到的地图点索引
+                             keypoints_status,//右相机对应landmarks对应的状态
+                             keypoints_3d,//应该是左右相机匹配的特征点在相机坐标系下的3d坐标，索引顺序和landmarks一致
+                             left_camera_pose,//应该是左相机在世界坐标系下的位姿
+                             &points_with_id_stereo);//输入 + 输出结果
     VLOG(20) << "Number of stereo landmarks used for the mesh: "
              << points_with_id_stereo.size() << "\n"
              << "Number of VIO landmarks used for the mesh: "
@@ -1491,25 +1511,27 @@ void Mesher::updateMesh3D(const PointsWithIdMap& points_with_id_VIO,
            << points_with_id_all->size();
 
   // Build 2D mesh.
-  std::vector<cv::Vec6f> mesh_2d_pixels;
-  createMesh2dVIO(&mesh_2d_pixels,
-                  landmarks,
-                  keypoints_status,
-                  keypoints,
-                  mesher_params_.img_size_,
-                  *points_with_id_all);
+  //2.
+  std::vector<cv::Vec6f> mesh_2d_pixels;//返回的结果是在图像中的三角面片，每个三角形是三个点
+  createMesh2dVIO(&mesh_2d_pixels,//输出变量 返回的结果是在图像中的三角面片，每个三角形是三个点
+                  landmarks,//输入变量，应该是左相机观测到的地图点索引
+                  keypoints_status,//输入变量，右相机对应landmarks对应的状态
+                  keypoints,//输入变量左相机对应的2d特征点坐标,索引和landmarks一致
+                  mesher_params_.img_size_,//输入变量
+                  *points_with_id_all);//输入变量， key = landmark的id， value = 3d坐标
   if (mesh_2d_for_viz) *mesh_2d_for_viz = mesh_2d_pixels;
   LOG_IF(WARNING, mesh_2d_pixels.size() == 0) << "2D Mesh is empty!";
 
-  populate3dMeshTimeHorizon(mesh_2d_pixels,
-                            *points_with_id_all,
-                            keypoints,
-                            landmarks,
-                            left_camera_pose,
+  //3.会更新
+  populate3dMeshTimeHorizon(mesh_2d_pixels,//在左图像上的图像三角面片
+                            *points_with_id_all,//输入变量， key = landmark的id， value = 3d坐标
+                            keypoints,//输入变量左相机对应的2d特征点坐标,索引和landmarks一致
+                            landmarks,//输入变量，应该是左相机观测到的地图点索引
+                            left_camera_pose,//左相机的绝对位姿
                             FLAGS_min_ratio_btw_largest_smallest_side,
                             FLAGS_min_elongation_ratio,
                             FLAGS_max_triangle_side,
-                            mesh_2d);
+                            mesh_2d);//整个大函数的输出变量
 
   // Calculate 3d mesh normals.
   if (FLAGS_compute_per_vertex_normals) mesh_3d_.computePerVertexNormals();
@@ -1523,20 +1545,23 @@ void Mesher::updateMesh3D(const PointsWithIdMap& points_with_id_VIO,
 void Mesher::updateMesh3D(const MesherInput& mesher_payload,//从外部输入的数据
                           Mesh2D* mesh_2d,
                           std::vector<cv::Vec6f>* mesh_2d_for_viz) {
+  //拿出当前这一帧的数据                          
   const StereoFrame& stereo_frame =  mesher_payload.frontend_output_->stereo_frame_lkf_;
+  //右相机对应的关键点
   const StatusKeypointsCV& right_keypoints = stereo_frame.right_keypoints_rectified_;
+  //右相机每个关键点对应的状态：因该是是否和左相机匹配上了，深度是否有效等信息
   std::vector<KeypointStatus> right_keypoint_status;
   right_keypoint_status.reserve(right_keypoints.size());
   for (const StatusKeypointCV& kpt : right_keypoints) {
     right_keypoint_status.push_back(kpt.first);
   }
 
-  updateMesh3D(mesher_payload.backend_output_->landmarks_with_id_map_,//
-               stereo_frame.left_frame_.keypoints_,
-               right_keypoint_status,
-               stereo_frame.keypoints_3d_,
-               stereo_frame.left_frame_.landmarks_,
-               mesher_payload.backend_output_->W_State_Blkf_.pose_.compose(mesher_params_.B_Pose_camLrect_),
+  updateMesh3D(mesher_payload.backend_output_->landmarks_with_id_map_,//key = landmark的id， value = 3d坐标
+               stereo_frame.left_frame_.keypoints_,//左相机对应的2d特征点坐标
+               right_keypoint_status,//右相机每个特征点对应的状态
+               stereo_frame.keypoints_3d_,//应该是左右相机匹配的特征点在相机坐标系下的3d坐标
+               stereo_frame.left_frame_.landmarks_,//应该是左相机观测到的地图点索引
+               mesher_payload.backend_output_->W_State_Blkf_.pose_.compose(mesher_params_.B_Pose_camLrect_),//应该是相机在世界坐标系下的位姿
                mesh_2d,//for output
                mesh_2d_for_viz);//for output
 }
@@ -1544,22 +1569,27 @@ void Mesher::updateMesh3D(const MesherInput& mesher_payload,//从外部输入的
 /* -------------------------------------------------------------------------- */
 // Attempts to insert new points in the map, but does not override if there
 // is already a point with the same lmk id.
+/*
+landmarks,//应该是左相机观测到的地图点
+                             keypoints_status,//右相机每个特征点对应的状态
+                             keypoints_3d,//应该是左右相机匹配的特征点在相机坐标系下的3d坐标
+                             left_camera_pose,//应该是左相机在世界坐标系下的位姿
+                             &points_with_id_stereo);//输入 + 输出结果
+*/
 void Mesher::appendNonVioStereoPoints(
-    const LandmarkIds& landmarks,
-    const std::vector<KeypointStatus>& keypoints_status,
-    const BearingVectors& keypoints_3d,
-    const gtsam::Pose3& left_cam_pose,
-    PointsWithIdMap* points_with_id_stereo) const {
+    const LandmarkIds& landmarks,//应该是左相机观测到的地图点索引
+    const std::vector<KeypointStatus>& keypoints_status,//右相机每个特征点对应的状态
+    const BearingVectors& keypoints_3d,//应该是左右相机匹配的特征点在相机坐标系下的3d坐标
+    const gtsam::Pose3& left_cam_pose,//应该是左相机在世界坐标系下的位姿
+    PointsWithIdMap* points_with_id_stereo) const //输入 + 输出结果 key = landmark的id， value = 3d坐标
+{
   CHECK_NOTNULL(points_with_id_stereo);
-  CHECK_EQ(landmarks.size(), keypoints_status.size())
-      << "Landmarks and keypoints_status should have same dimension...";
-  CHECK_EQ(landmarks.size(), keypoints_3d.size())
-      << "Landmarks and keypoints_3d should have same dimension...";
+  CHECK_EQ(landmarks.size(), keypoints_status.size()) << "Landmarks and keypoints_status should have same dimension...";
+  CHECK_EQ(landmarks.size(), keypoints_3d.size()) << "Landmarks and keypoints_3d should have same dimension...";
   for (size_t i = 0; i < landmarks.size(); i++) {
     const LandmarkId& landmark_id = landmarks.at(i);
     if (keypoints_status.at(i) == KeypointStatus::VALID && landmark_id != -1) {
-      const gtsam::Point3& p_i_global =
-          left_cam_pose.transformFrom(gtsam::Point3(keypoints_3d.at(i)));
+      const gtsam::Point3& p_i_global = left_cam_pose.transformFrom(gtsam::Point3(keypoints_3d.at(i)));
       // Use insert() instead of [] operator, to make sure that if there is
       // already a point with the same lmk_id, we do not override it.
       points_with_id_stereo->insert(std::make_pair(landmark_id, p_i_global));
@@ -1671,50 +1701,50 @@ void Mesher::deserializeMeshes() {
 
 /* -------------------------------------------------------------------------- */
 void Mesher::createMesh2dVIO(
-    std::vector<cv::Vec6f>* triangulation_2D,
-    const LandmarkIds& landmarks,
-    const std::vector<KeypointStatus>& keypoints_status,
-    const KeypointsCV& keypoints,
-    const cv::Size& img_size,
-    const PointsWithIdMap& pointsWithIdVIO) {
+    std::vector<cv::Vec6f>* triangulation_2D,//输出变量 返回的结果是在图像中的三角面片，每个三角形是三个点
+    const LandmarkIds& landmarks,//输入变量，应该是左相机观测到的地图点索引
+    const std::vector<KeypointStatus>& keypoints_status,//输入变量，右相机对应landmarks对应的状态
+    const KeypointsCV& keypoints,//输入变量左相机对应的2d特征点坐标,索引和landmarks一致
+    const cv::Size& img_size,//输入变量
+    const PointsWithIdMap& pointsWithIdVIO) {//输入变量类型是unorderd_map， key = landmark的id， value = 3d坐标
+
   CHECK_NOTNULL(triangulation_2D);
 
   // Pick left frame.
   // Sanity check.
-  CHECK_EQ(landmarks.size(), keypoints_status.size())
-      << "Wrong dimension for the landmarks";
-  CHECK_EQ(landmarks.size(), keypoints.size())
-      << "Wrong dimension for the keypoints";
+  CHECK_EQ(landmarks.size(), keypoints_status.size()) << "Wrong dimension for the landmarks";
+  CHECK_EQ(landmarks.size(), keypoints.size()) << "Wrong dimension for the keypoints";
 
   // Create mesh including indices of keypoints with valid 3D.
   // (which have right px).
   std::vector<cv::Point2f> keypoints_for_mesh;
   // TODO this double loop is quite expensive.
-  LOG_IF(WARNING, pointsWithIdVIO.empty())
-      << "List of Keypoints with associated Landmarks is empty.";
+  LOG_IF(WARNING, pointsWithIdVIO.empty()) << "List of Keypoints with associated Landmarks is empty.";
+
+  //如果左右相机都能观测到这个地图点，就把这个地图点在左相机坐标系下的坐标压入到keypoints_for_mesh
   for (const auto& point_with_id : pointsWithIdVIO) {
     for (size_t j = 0u; j < landmarks.size(); j++) {
       // If we are seeing a VIO point in left and right frame, add to keypoints
       // to generate the mesh in 2D.
-      if (landmarks.at(j) == point_with_id.first &&
-          keypoints_status.at(j) == KeypointStatus::VALID) {
+      if (landmarks.at(j) == point_with_id.first && keypoints_status.at(j) == KeypointStatus::VALID) {
         // Add keypoints for mesh 2d.
         keypoints_for_mesh.push_back(keypoints.at(j));
       }
     }
   }
 
+  //返回的结果是在图像中的三角面片，每个三角形是三个点
   // Get a triangulation for all valid keypoints.
-  *triangulation_2D = createMesh2dImpl(img_size, keypoints_for_mesh);
-}
+  *triangulation_2D = createMesh2dImpl(img_size, keypoints_for_mesh);//两个都是输入变量
+}//end function createMesh2dVIO
 
 /* -------------------------------------------------------------------------- */
 // Create a 2D mesh from 2D corners in an image
 // Returns the actual keypoints used to perform the triangulation.
-std::vector<cv::Vec6f> Mesher::createMesh2dImpl(
-    const cv::Size& img_size,
-    const KeypointsCV& keypoints_to_triangulate,
-    MeshIndices* vtx_indices) {
+//返回的结果是在图像中的三角面片，每个三角形是三个点
+std::vector<cv::Vec6f> Mesher::createMesh2dImpl(const cv::Size& img_size,
+                                                const KeypointsCV& keypoints_to_triangulate,//一定和地图中的3d点有对应关系的左图像的像素坐标
+                                                MeshIndices* vtx_indices) {
   // Nothing to triangulate.
   if (keypoints_to_triangulate.size() == 0) return std::vector<cv::Vec6f>();
 
@@ -1771,8 +1801,8 @@ std::vector<cv::Vec6f> Mesher::createMesh2dImpl(
   // image
   // TODO I think that the spurious triangles are due to ourselves sending
   // keypoints out of the image... Compute actual triangulation.
-  std::vector<cv::Vec6f> tri_2d;
-  subdiv.getTriangleList(tri_2d);
+  std::vector<cv::Vec6f> tri_2d;//一个三角形对应的三个顶点坐标
+  subdiv.getTriangleList(tri_2d);//非常重要的函数！！！在图像中生成三角面片
 
   // If requested, also return the unique ids of the vertices of each triangle.
   // subdiv.locate has a bug, let us just use hashes of vertices...
@@ -1789,7 +1819,7 @@ std::vector<cv::Vec6f> Mesher::createMesh2dImpl(
         rect.contains(cv::Point2f(tri[2], tri[3])) &&
         rect.contains(cv::Point2f(tri[4], tri[5]))) {
       // Triangle with all vertices inside image
-      good_triangulation.push_back(tri);
+      good_triangulation.push_back(tri);//更新了要返回的变量
 
       // Find vertex ids!
       if (vtx_indices) {
@@ -1816,7 +1846,7 @@ std::vector<cv::Vec6f> Mesher::createMesh2dImpl(
     }
   }
   return good_triangulation;
-}
+}//end function createMesh2dImpl
 
 /* -------------------------------------------------------------------------- */
 // Create a 2D mesh from 2D corners in an image
@@ -1844,7 +1874,8 @@ std::vector<cv::Vec6f> Mesher::createMesh2D(
       keypoints_to_triangulate.push_back(keypoint_i);
     }
   }
-  return createMesh2dImpl(frame_size, keypoints_to_triangulate);
+  return createMesh2dImpl(frame_size, keypoints_to_triangulate);//返回的结果是在图像中的三角面片，每个三角形是三个点
+
 }
 
 /* -------------------------------------------------------------------------- */
