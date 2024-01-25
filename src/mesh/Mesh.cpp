@@ -94,9 +94,12 @@ void Mesh<VertexPositionType>::addPolygonToMesh(const Polygon& polygon) {
 
   // Update vertices in the mesh (this happens all the time, even if we
   // do not add a new triangle connectivity-wise).
-  VertexIds vtx_ids;
+  VertexIds vtx_ids;//这个三角形对应的全局mesh 顶点序号
   bool triangle_maybe_already_in_mesh = true;
-  //1.
+
+  //只要有一个顶点不在全局的mesh中则认定triangle_maybe_already_in_mesh = false;
+  //输入的多边形 = 一个三角形数据结构
+  //1.遍历这个多边形的所有顶点 判断是否顶点在全局mesh中
   for (const VertexType& vertex : polygon) {
     const LandmarkId& lmk_id = vertex.getLmkId();
     VertexId existing_vtx_id;
@@ -109,11 +112,11 @@ void Mesh<VertexPositionType>::addPolygonToMesh(const Polygon& polygon) {
                                  vertex.getVertexPosition(),
                                  vertex.getVertexColor(),
                                  vertex.getVertexNormal(),
-                                 &vertex_to_lmk_id_map_,
-                                 &lmk_id_to_vertex_map_,
-                                 &vertices_mesh_,
-                                 &vertices_mesh_normal_,
-                                 &vertices_mesh_color_);
+                                 &vertex_to_lmk_id_map_,//输出，顶点到landmark索引
+                                 &lmk_id_to_vertex_map_,//输出，landmark到顶点的索引
+                                 &vertices_mesh_,//输出，mesh所有顶点
+                                 &vertices_mesh_normal_,//输出，mesh所有顶点的法向量
+                                 &vertices_mesh_color_);//输出，mesh所有顶点对应的颜色
     if (triangle_maybe_already_in_mesh) {
       // Just a small sanity check.
       CHECK_EQ(vtx_id, existing_vtx_id);
@@ -121,19 +124,22 @@ void Mesh<VertexPositionType>::addPolygonToMesh(const Polygon& polygon) {
 
     CHECK_NE(vtx_id, -1);
     vtx_ids.push_back(vtx_id);
-  }
+  }//遍历所有的多边形顶点结束
   CHECK_EQ(vtx_ids.size(), polygon_dimension_);
 
   // DO NOT sort vtx_ids, or the normals will flip!
+  //2.判断face是否在全局mesh中
   VertexIds sorted_vtx_ids = vtx_ids;
   std::sort(sorted_vtx_ids.begin(), sorted_vtx_ids.end());
-  const auto& face_hash = UtilsNumerical::hashTriplet(
-      sorted_vtx_ids[0], sorted_vtx_ids[1], sorted_vtx_ids[2]);
+  //将三个int得到一个唯一hash索引
+  const auto& face_hash = UtilsNumerical::hashTriplet(sorted_vtx_ids[0], sorted_vtx_ids[1], sorted_vtx_ids[2]);
+  //std::unordered_map<size_t, bool> face_hashes_;
   const auto& it = face_hashes_.find(face_hash);
 
   // Check the triangle is not already in the mesh
   CHECK_EQ(polygon_dimension_, 3) << "This doesn't work with non-triangles";
   bool triangle_in_mesh = false;
+  //顶点在全局mesh中但是face不一定在
   if (triangle_maybe_already_in_mesh) {
     // Check that the triangle is not already in the mesh!
     if (it != face_hashes_.end()) {
@@ -141,21 +147,16 @@ void Mesh<VertexPositionType>::addPolygonToMesh(const Polygon& polygon) {
       // Triangle already exists!
       triangle_in_mesh = true;
       CHECK(it->second);
-      CHECK_EQ(
-          adjacency_matrix_.at<uint8_t>(sorted_vtx_ids[0], sorted_vtx_ids[1]),
-          1u);
-      CHECK_EQ(
-          adjacency_matrix_.at<uint8_t>(sorted_vtx_ids[1], sorted_vtx_ids[2]),
-          1u);
-      CHECK_EQ(
-          adjacency_matrix_.at<uint8_t>(sorted_vtx_ids[2], sorted_vtx_ids[0]),
-          1u);
+      CHECK_EQ(adjacency_matrix_.at<uint8_t>(sorted_vtx_ids[0], sorted_vtx_ids[1]), 1u);
+      CHECK_EQ(adjacency_matrix_.at<uint8_t>(sorted_vtx_ids[1], sorted_vtx_ids[2]), 1u);
+      CHECK_EQ(adjacency_matrix_.at<uint8_t>(sorted_vtx_ids[2], sorted_vtx_ids[0]), 1u);
     } else {
-      triangle_in_mesh = false;
+      triangle_in_mesh = false;//face不在全局mesh里面
     }
   }
 
-  if (!triangle_in_mesh) {
+  //3.更新全局mesh的adjacency_matrix_ 和face信息
+  if (!triangle_in_mesh) {//如果face不在全局mesh里面，就需要让这个新的face更新全局mesh的face信息
     // LOG(ERROR) << "Adding face with hash: " << face_hash;
     CHECK(it == face_hashes_.end()) << "Hash collision? This can happen but "
                                        "weird... Check your hashing function.";
@@ -163,19 +164,22 @@ void Mesh<VertexPositionType>::addPolygonToMesh(const Polygon& polygon) {
 
     // Update polygons_mesh_
     // Specify number of point ids per face in the mesh.
+    //先更新全局mesh的全局face信息
     polygons_mesh_.push_back(static_cast<int>(polygon_dimension_));
     for (const VertexId& vtx_id : vtx_ids) {
       polygons_mesh_.push_back(static_cast<int>(vtx_id));
     }
 
     // Update adjacency matrix
-    if (!triangle_maybe_already_in_mesh) {
+
+    if (!triangle_maybe_already_in_mesh) {//顶点不在全局mesh中 需要对adjacency_matrix_进行扩容
       // There are new vertices!
       // TODO(Toni): this assumes that we never remove vertices!!
       // Add a new col/row for each new vtx
       // Check vtx_ids are ordered
-      VertexIds sorted_vtx_ids = vtx_ids;
+      VertexIds sorted_vtx_ids = vtx_ids;//这个三角形对应的全局mesh 顶点序号
       std::sort(sorted_vtx_ids.begin(), sorted_vtx_ids.end());
+
       for (const auto& sorted_vtx_id : sorted_vtx_ids) {
         if (sorted_vtx_id >= static_cast<size_t>(adjacency_matrix_.rows)) {
           // Non-existing vertex! Add row/col. Careful! vtx_ids ordering
@@ -219,9 +223,11 @@ Mesh<VertexPositionType>::updateMeshDataStructures(
     const VertexNormal& vertex_normal,
     std::map<VertexId, LandmarkId>* vertex_to_lmk_id_map,
     std::map<LandmarkId, VertexId>* lmk_id_to_vertex_id_map,
-    cv::Mat* vertices_mesh,
-    VertexNormals* vertices_mesh_normal,
-    cv::Mat* vertices_mesh_color) const {
+    cv::Mat* vertices_mesh,//全局mesh对应的顶点
+    VertexNormals* vertices_mesh_normal,//全局mesh每个顶点对应的法向量
+    cv::Mat* vertices_mesh_color) const {//全局mesh每个顶点对应的颜色
+
+
   CHECK_NOTNULL(vertex_to_lmk_id_map);
   CHECK_NOTNULL(lmk_id_to_vertex_id_map);
   CHECK_NOTNULL(vertices_mesh);
@@ -230,12 +236,12 @@ Mesh<VertexPositionType>::updateMeshDataStructures(
   DCHECK(!normals_computed_) << "Normals should be invalidated before...";
 
   const auto& lmk_id_to_vertex_map_end = lmk_id_to_vertex_id_map->end();
-  const auto& vertex_it = lmk_id_to_vertex_id_map->find(lmk_id);
+  const auto& vertex_it = lmk_id_to_vertex_id_map->find(lmk_id);//判断全局地图是否有landmark这个点
 
-  VertexId row_id_vertex;
+  VertexId row_id_vertex;//typedef size_t VertexId;
   // Check whether this landmark is already in the set of vertices of the
   // mesh.
-  if (vertex_it == lmk_id_to_vertex_map_end) {
+  if (vertex_it == lmk_id_to_vertex_map_end) {//因为这个顶点对应的landmark序号在全局的mesh中并没有，因此需要向全局mesh添加这个顶点
     // New landmark, create a new entrance in the set of vertices.
     // Store 3D points in map_points_3d.
     vertices_mesh->push_back(lmk_position);
@@ -249,13 +255,14 @@ Mesh<VertexPositionType>::updateMeshDataStructures(
   } else {
     // Update old landmark with new position.
     // But don't update the color information... Or should we?
+    //因为这个顶点对应的landmark在全局mesh中已经存在，则需要更新这个顶点的坐标， 这个顶点的法向量，这个顶点的颜色
     row_id_vertex = vertex_it->second;
     vertices_mesh->at<VertexPositionType>(row_id_vertex) = lmk_position;
     vertices_mesh_normal->at(row_id_vertex) = vertex_normal;
     vertices_mesh_color->at<VertexColorRGB>(row_id_vertex) = vertex_color;
   }
   return row_id_vertex;
-}
+}//end function updateMeshDataStructures
 
 /* --------------------------------------------------------------------------
  */

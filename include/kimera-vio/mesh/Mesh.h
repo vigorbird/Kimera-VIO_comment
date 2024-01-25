@@ -283,6 +283,7 @@ class Mesh {
   /// Members
   /// TODO maybe use bimap.
   // Vertex to LmkId Map
+  // typedef std::map<VertexId, LandmarkId> VertexToLmkIdMap;
   VertexToLmkIdMap vertex_to_lmk_id_map_;
 
   // LmkId to Vertex Map
