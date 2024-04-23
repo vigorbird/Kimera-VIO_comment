@@ -24,9 +24,11 @@ namespace VIO {
 
 /* -------------------------------------------------------------------------- */
 // Open files with name output_filename, and checks that it is valid.
-double UtilsGeometry::getRatioBetweenTangentialAndRadialDisplacement(
-    const std::vector<gtsam::Point3>& points) {
+//输入的是三个点在当前帧下的坐标
+//详见算法实现！！！！！！
+double UtilsGeometry::getRatioBetweenTangentialAndRadialDisplacement(const std::vector<gtsam::Point3>& points) {
   // Compute radial directions.
+  //首先获取最大和最小的z值
   double min_z = std::numeric_limits<double>::max();
   double max_z = 0;
   for (size_t i = 0; i < points.size(); i++) {
@@ -47,14 +49,11 @@ double UtilsGeometry::getRatioBetweenTangentialAndRadialDisplacement(
   }
 
   double max_t = 0.0;
-  double tangential_elongation_1 =
-      (points_rescaled.at(0) - points_rescaled.at(1)).norm();
+  double tangential_elongation_1 = (points_rescaled.at(0) - points_rescaled.at(1)).norm();
   max_t = std::max(max_t, tangential_elongation_1);
-  double tangential_elongation_2 =
-      (points_rescaled.at(1) - points_rescaled.at(2)).norm();
+  double tangential_elongation_2 = (points_rescaled.at(1) - points_rescaled.at(2)).norm();
   max_t = std::max(max_t, tangential_elongation_2);
-  double tangential_elongation_3 =
-      (points_rescaled.at(0) - points_rescaled.at(2)).norm();
+  double tangential_elongation_3 = (points_rescaled.at(0) - points_rescaled.at(2)).norm();
   max_t = std::max(max_t, tangential_elongation_3);
 
   // Points must be in front of the camera, and min should be less than max.
@@ -64,6 +63,6 @@ double UtilsGeometry::getRatioBetweenTangentialAndRadialDisplacement(
     return 0;
   }
   return max_t / (max_z - min_z);
-}
+}//end function getRatioBetweenTangentialAndRadialDisplacement
 
 }  // namespace VIO

@@ -321,6 +321,7 @@ class Mesh {
   //! Connectivity of the mesh at the edge level.
   //! Squared matrix of vertices, ordered according to vtx_id (meaning their
   //! position in the vertices_mesh_ rows.
+  //某个元素为1 表示形成了face
   cv::Mat adjacency_matrix_;
 
   //! Used as a hash to know if a face is in the mesh

@@ -107,6 +107,7 @@ void Mesh<VertexPositionType>::addPolygonToMesh(const Polygon& polygon) {
       // Vtx is not in the mesh, so no way the triangle is in the mesh.
       triangle_maybe_already_in_mesh = false;
     }
+    //下面这个函数不是很重要的小函数
     const VertexId& vtx_id =
         updateMeshDataStructures(lmk_id,
                                  vertex.getVertexPosition(),

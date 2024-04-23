@@ -349,25 +349,22 @@ double Mesher::getRatioBetweenTangentialAndRadialDisplacement(
     const Vertex3D& p3,
     const gtsam::Pose3& leftCameraPose) const {
   std::vector<gtsam::Point3> points;
-
+  //将世界坐标系下的点变换到当前帧坐标系下
   // get 3D points
   gtsam::Point3 p1_C = gtsam::Point3(static_cast<double>(p1.x),
                                      static_cast<double>(p1.y),
                                      static_cast<double>(p1.z));
-  points.push_back(
-      leftCameraPose.transformTo(p1_C));  // checks elongation in *camera frame*
+  points.push_back(  leftCameraPose.transformTo(p1_C));  // checks elongation in *camera frame*
 
   gtsam::Point3 p2_C = gtsam::Point3(static_cast<double>(p2.x),
                                      static_cast<double>(p2.y),
                                      static_cast<double>(p2.z));
-  points.push_back(
-      leftCameraPose.transformTo(p2_C));  // checks elongation in *camera frame*
+  points.push_back(leftCameraPose.transformTo(p2_C));  // checks elongation in *camera frame*
 
   gtsam::Point3 p3_C = gtsam::Point3(static_cast<double>(p3.x),
                                      static_cast<double>(p3.y),
                                      static_cast<double>(p3.z));
-  points.push_back(
-      leftCameraPose.transformTo(p3_C));  // checks elongation in *camera frame*
+  points.push_back( leftCameraPose.transformTo(p3_C));  // checks elongation in *camera frame*
 
   return UtilsGeometry::getRatioBetweenTangentialAndRadialDisplacement(points);
 }
@@ -405,7 +402,7 @@ void Mesher::filterOutBadTriangles(const gtsam::Pose3& leftCameraPose,
 /* -------------------------------------------------------------------------- */
 // Try to reject bad triangles, corresponding to outliers.
 bool Mesher::isBadTriangle(
-    const Mesh3D::Polygon& polygon,
+    const Mesh3D::Polygon& polygon,//某个三角面片对应的三维点
     const gtsam::Pose3& left_camera_pose,
     const double& min_ratio_between_largest_an_smallest_side,
     const double& min_elongation_ratio,
@@ -427,16 +424,18 @@ bool Mesher::isBadTriangle(
 
   // If threshold is disabled, avoid computation.
   if (min_ratio_between_largest_an_smallest_side > 0.0) {
-    ratioSides_i = getRatioBetweenSmallestAndLargestSide(d12, d23, d31);
+    //不能太大
+    ratioSides_i = getRatioBetweenSmallestAndLargestSide(d12, d23, d31);//最小距离除以最大距离
   }
 
   // If threshold is disabled, avoid computation.
   if (min_elongation_ratio > 0.0) {
-    ratioTangentialRadial_i = getRatioBetweenTangentialAndRadialDisplacement(
-        p1, p2, p3, left_camera_pose);
+    //不能太大
+    ratioTangentialRadial_i = getRatioBetweenTangentialAndRadialDisplacement( p1, p2, p3, left_camera_pose);
   }
 
   // If threshold is disabled, avoid computation.
+  //两两点之间的最大距离 不能太小
   if (max_triangle_side > 0.0) {
     std::array<double, 3> sidesLen;
     sidesLen.at(0) = d12;
@@ -476,7 +475,7 @@ void Mesher::populate3dMeshTimeHorizon(
   VLOG(10) << "Starting populate3dMeshTimeHorizon...";
   VLOG(10) << "Starting populate3dMesh...";
   //这个函数除了会输出mesh_2d，还会更新成员变量mesh_3d_ 
-  populate3dMesh(mesh_2d_pixels,//在左图像上的图像三角面片
+  populate3dMesh(mesh_2d_pixels,//上一步计算得到的在左图像上的图像三角面片
                  points_with_id_map,//输入变量， key = landmark的id， value = 3d坐标
                  keypoints,//输入变量左相机对应的2d特征点坐标,索引和landmarks一致
                  landmarks,//输入变量，应该是左相机观测到的地图点索引
@@ -504,7 +503,7 @@ void Mesher::populate3dMeshTimeHorizon(
 //遍历所有的三角网格，找到这些二维三角网格对应的空间3维点坐标
 //并构建空间三维网格，使用新的网格去更新mesh（调用函数：addPolygonToMesh）
 //会更新成员变量mesh_3d_ 
-void Mesher::populate3dMesh(const std::vector<cv::Vec6f>& mesh_2d_pixels,//在左图像上的图像三角面片
+void Mesher::populate3dMesh(const std::vector<cv::Vec6f>& mesh_2d_pixels,//上一步计算得到的在左图像上的图像三角面片
                             const PointsWithIdMap& points_with_id_map,//输入变量， key = landmark的id， value = 3d坐标
                             const KeypointsCV& keypoints,//输入变量左相机对应的2d特征点坐标,索引和landmarks一致
                             const LandmarkIds& landmarks,//输入变量，应该是左相机观测到的地图点索引
@@ -533,13 +532,14 @@ void Mesher::populate3dMesh(const std::vector<cv::Vec6f>& mesh_2d_pixels,//在�
   polygon.resize(3);
 
   // Iterate over the 2d mesh triangles.
-  //遍历所有的像素点
+  //遍历所有的三角面片
   for (size_t i = 0u; i < mesh_2d_pixels.size(); i++) {
 
     const cv::Vec6f& triangle_2d = mesh_2d_pixels.at(i);
 
     // Iterate over each vertex (pixel) of the triangle.
     // Triangle_2d.rows = 3.
+    //遍历一个三角面片的三个像素
     for (size_t j = 0u; j < triangle_2d.rows / 2u; j++) {
 
       // Extract pixel.
@@ -1511,7 +1511,7 @@ void Mesher::updateMesh3D(const PointsWithIdMap& points_with_id_VIO,//key = land
            << points_with_id_all->size();
 
   // Build 2D mesh.
-  //2.
+  //2.这个函数的主要作用就是将对应的地图点对应的左相机的像素坐标找到，然后调用opencv函数，在图像上生成三角面片！
   std::vector<cv::Vec6f> mesh_2d_pixels;//返回的结果是在图像中的三角面片，每个三角形是三个点
   createMesh2dVIO(&mesh_2d_pixels,//输出变量 返回的结果是在图像中的三角面片，每个三角形是三个点
                   landmarks,//输入变量，应该是左相机观测到的地图点索引
@@ -1545,7 +1545,7 @@ void Mesher::updateMesh3D(const PointsWithIdMap& points_with_id_VIO,//key = land
 void Mesher::updateMesh3D(const MesherInput& mesher_payload,//从外部输入的数据
                           Mesh2D* mesh_2d,
                           std::vector<cv::Vec6f>* mesh_2d_for_viz) {
-  //拿出当前这一帧的数据                          
+  //拿出当前这一帧的左右相机的数据                          
   const StereoFrame& stereo_frame =  mesher_payload.frontend_output_->stereo_frame_lkf_;
   //右相机对应的关键点
   const StatusKeypointsCV& right_keypoints = stereo_frame.right_keypoints_rectified_;
@@ -1569,13 +1569,6 @@ void Mesher::updateMesh3D(const MesherInput& mesher_payload,//从外部输入的
 /* -------------------------------------------------------------------------- */
 // Attempts to insert new points in the map, but does not override if there
 // is already a point with the same lmk id.
-/*
-landmarks,//应该是左相机观测到的地图点
-                             keypoints_status,//右相机每个特征点对应的状态
-                             keypoints_3d,//应该是左右相机匹配的特征点在相机坐标系下的3d坐标
-                             left_camera_pose,//应该是左相机在世界坐标系下的位姿
-                             &points_with_id_stereo);//输入 + 输出结果
-*/
 void Mesher::appendNonVioStereoPoints(
     const LandmarkIds& landmarks,//应该是左相机观测到的地图点索引
     const std::vector<KeypointStatus>& keypoints_status,//右相机每个特征点对应的状态
@@ -1706,7 +1699,7 @@ void Mesher::createMesh2dVIO(
     const std::vector<KeypointStatus>& keypoints_status,//输入变量，右相机对应landmarks对应的状态
     const KeypointsCV& keypoints,//输入变量左相机对应的2d特征点坐标,索引和landmarks一致
     const cv::Size& img_size,//输入变量
-    const PointsWithIdMap& pointsWithIdVIO) {//输入变量类型是unorderd_map， key = landmark的id， value = 3d坐标
+    const PointsWithIdMap& pointsWithIdVIO) {//输入变量类型是unorderd_map， key = landmark的id， value = 3d坐标，是地图点坐标和双目新三角化出的地图点
 
   CHECK_NOTNULL(triangulation_2D);
 
@@ -1829,8 +1822,7 @@ std::vector<cv::Vec6f> Mesher::createMesh2dImpl(const cv::Size& img_size,
           // Extract vertex == pixel.
           const cv::Point2f pixel(tri[j * 2u], tri[j * 2u + 1u]);
           // Find vertex ids
-          tri_vtx_indices[j] =
-              UtilsNumerical::hashPair(std::make_pair(pixel.x, pixel.y));
+          tri_vtx_indices[j] = UtilsNumerical::hashPair(std::make_pair(pixel.x, pixel.y));
         }
         vtx_indices->push_back(tri_vtx_indices);
       }
