@@ -356,7 +356,7 @@ void Mesh<VertexPositionType>::computePerVertexNormals() {
 
   // Walk through triangles and compute averaged vertex normals.
   Polygon polygon;
-  //遍历所有的边
+  //遍历所有的三维三角形
   for (size_t i = 0; i < getNumberOfPolygons(); i++) {
     CHECK(getPolygon(i, &polygon)) << "Could not retrieve polygon.";
     CHECK_EQ(polygon.size(), 3);
@@ -371,6 +371,7 @@ void Mesh<VertexPositionType>::computePerVertexNormals() {
     VertexNormal normal(v31.cross(v21));
 
     // Normalize.
+    //先使用这个三角形的三个点，计算得到这个面对应的法向量
     double norm = cv::norm(normal);
     CHECK_GT(norm, 0.0);
     normal /= norm;
@@ -391,6 +392,7 @@ void Mesh<VertexPositionType>::computePerVertexNormals() {
     const VertexId& p2_idx = lmk_id_to_vertex_map_.at(polygon.at(1).getLmkId());
     const VertexId& p3_idx = lmk_id_to_vertex_map_.at(polygon.at(2).getLmkId());
     /// Sum of normals per vertex
+    //然后增量式更新每个顶点的法向量
     vertices_mesh_normal_.at(p1_idx) =(counts.at(p1_idx) * vertices_mesh_normal_.at(p1_idx) + normal) / (counts.at(p1_idx) + 1.0);
     vertices_mesh_normal_.at(p2_idx) = counts.at(p2_idx) * vertices_mesh_normal_.at(p2_idx) + normal / (counts.at(p2_idx) + 1.0);
     vertices_mesh_normal_.at(p3_idx) = counts.at(p3_idx) * vertices_mesh_normal_.at(p3_idx) + normal / (counts.at(p3_idx) + 1.0);

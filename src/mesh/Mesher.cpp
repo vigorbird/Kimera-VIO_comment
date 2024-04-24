@@ -1492,9 +1492,10 @@ void Mesher::updateMesh3D(const PointsWithIdMap& points_with_id_VIO,//key = land
     if (kAppendStereoLmks) {
       points_with_id_stereo = points_with_id_VIO;//key = landmark的id， value = 3d坐标
     }
+
     //1.这个函数应该是将左右相机匹配得到的地图点加入到整体索引中
     appendNonVioStereoPoints(landmarks,//应该是左相机观测到的地图点索引
-                             keypoints_status,//右相机对应landmarks对应的状态
+                             keypoints_status,//右相机每个特征点对应的状态
                              keypoints_3d,//应该是左右相机匹配的特征点在相机坐标系下的3d坐标，索引顺序和landmarks一致
                              left_camera_pose,//应该是左相机在世界坐标系下的位姿
                              &points_with_id_stereo);//输入 + 输出结果
